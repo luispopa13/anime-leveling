@@ -1,18 +1,25 @@
-const express = require('express');
-const corsMiddleware = require('./middleware/cors');
 require('dotenv').config();
 
+const express     = require('express');
+const compression = require('compression');
+const corsMiddleware = require('./middleware/cors');
+
 const animeRoutes = require('./routes/animeRoutes');
+const animeContentRoutes = require('./routes/animeContentRoutes');
+const episodeContentRoutes = require('./routes/episodeContentRoutes');
+const sitemapRoutes        = require('./routes/sitemapRoutes');
+const episodeSourcesRoutes = require('./routes/episodeSources');
+const { connectDB } = require('./utils/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.use(compression());
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging middleware (optional - for development)
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -20,54 +27,41 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Add a root route to fix the "Cannot GET /" error
+// Root route
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
+    success: true,
     message: 'Anime Streaming API is running!',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: {
+      root: '/',
+      sitemap: '/sitemap.xml',
+      health: '/api/health',
+      status: '/api/status',
       popular: '/api/anime/popular',
       trending: '/api/anime/trending',
       top100: '/api/anime/top100',
       latest: '/api/anime/latest',
       search: '/api/anime/search?q=YOUR_QUERY',
       details: '/api/anime/details/ANIME_ID',
-      recentlyUpdated: '/api/anime/recently-updated',
-      upcoming: '/api/anime/upcoming',
-      seasonPopular: '/api/anime/season/popular',
-      seasonUpcoming: '/api/anime/season/upcoming',
-      byGenre: '/api/anime/genre/GENRE_NAME',
-      byYear: '/api/anime/year/YEAR',
-      bySeason: '/api/anime/season/SEASON/YEAR',
-      allCategories: '/api/anime/all-categories',
-      info: '/api/anime/info'
+      animeContentGet: '/api/content/anime/ANIME_ID',
+      animeContentUpsert: 'POST /api/content/anime',
+      animeContentDelete: 'DELETE /api/content/anime/ANIME_ID',
+      episodeContentGet: '/api/content/episode/ANIME_ID/EPISODE_NUMBER',
+      episodeContentUpsert: 'POST /api/content/episode',
+      episodeContentDelete: 'DELETE /api/content/episode/ANIME_ID/EPISODE_NUMBER',
     },
-    documentation: {
-      parameters: {
-        page: 'Page number (default: 1)',
-        perPage: 'Items per page (default: 20, max: 100)'
-      },
-      seasons: ['WINTER', 'SPRING', 'SUMMER', 'FALL'],
-      examples: [
-        '/api/anime/popular?page=1&perPage=20',
-        '/api/anime/search?q=attack%20on%20titan',
-        '/api/anime/season/SPRING/2024',
-        '/api/anime/genre/Action'
-      ]
-    }
   });
 });
 
-// Placeholder image endpoint for missing anime images
+// Placeholder image endpoint
 app.get('/api/placeholder/:width/:height', (req, res) => {
   const { width, height } = req.params;
-  
-  // Validate dimensions
+
   const w = Math.min(Math.max(parseInt(width) || 300, 50), 1000);
   const h = Math.min(Math.max(parseInt(height) || 400, 50), 1000);
-  
-  // Create a simple SVG placeholder
+
   const svg = `
     <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -85,24 +79,34 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
       </text>
     </svg>
   `;
-  
+
   res.setHeader('Content-Type', 'image/svg+xml');
-  res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.send(svg);
 });
 
+// Cache-Control pentru raspunsuri statice
+app.use('/api/anime/popular',        (req, res, next) => { res.set('Cache-Control', 'public, max-age=1200'); next(); });
+app.use('/api/anime/trending',       (req, res, next) => { res.set('Cache-Control', 'public, max-age=1200'); next(); });
+app.use('/api/anime/top100',         (req, res, next) => { res.set('Cache-Control', 'public, max-age=3600'); next(); });
+app.use('/api/anime/all-categories', (req, res, next) => { res.set('Cache-Control', 'public, max-age=1200'); next(); });
+
 // Routes
+app.use('/api/anime', episodeSourcesRoutes);
 app.use('/api/anime', animeRoutes);
+app.use('/api/content/anime', animeContentRoutes);
+app.use('/api/content/episode', episodeContentRoutes);
+app.use('/', sitemapRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'healthy',
-    message: 'Anime API is running!', 
+    message: 'Anime API is running!',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -113,27 +117,30 @@ app.get('/api/status', (req, res) => {
     api: 'Anime Streaming API',
     version: '1.0.0',
     status: 'operational',
-    endpoints: {
-      total: 15,
-      available: [
-        'GET /api/anime/popular',
-        'GET /api/anime/trending', 
-        'GET /api/anime/top100',
-        'GET /api/anime/latest',
-        'GET /api/anime/recently-updated',
-        'GET /api/anime/upcoming',
-        'GET /api/anime/season/popular',
-        'GET /api/anime/season/upcoming',
-        'GET /api/anime/season/:season/:year',
-        'GET /api/anime/search',
-        'GET /api/anime/details/:id',
-        'GET /api/anime/genre/:genre',
-        'GET /api/anime/year/:year',
-        'GET /api/anime/all-categories',
-        'GET /api/anime/info'
-      ]
-    },
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'API endpoint not found',
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 404 handler for all other routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found',
+    message: 'The requested resource does not exist',
+    path: req.path,
+    timestamp: new Date().toISOString(),
+    suggestion: 'Visit / for API information or /sitemap.xml for sitemap',
   });
 });
 
@@ -144,53 +151,20 @@ app.use((err, req, res, next) => {
     stack: err.stack,
     path: req.path,
     method: req.method,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
-  
-  // Don't leak error details in production
+
   const isDevelopment = process.env.NODE_ENV !== 'production';
-  
-  res.status(err.status || 500).json({ 
+
+  res.status(err.status || 500).json({
     success: false,
     error: isDevelopment ? err.message : 'Internal server error',
     timestamp: new Date().toISOString(),
     path: req.path,
-    ...(isDevelopment && { stack: err.stack })
+    ...(isDevelopment && { stack: err.stack }),
   });
 });
 
-// 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ 
-    success: false,
-    error: 'API endpoint not found',
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    availableEndpoints: [
-      '/api/anime/popular',
-      '/api/anime/trending',
-      '/api/anime/search?q=QUERY',
-      '/api/anime/details/ID',
-      '/api/health',
-      '/api/status'
-    ]
-  });
-});
-
-// 404 handler for all other routes
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    success: false,
-    error: 'Route not found',
-    message: 'The requested resource does not exist',
-    path: req.path,
-    timestamp: new Date().toISOString(),
-    suggestion: 'Visit / for API information or /api/anime/info for endpoint details'
-  });
-});
-
-// Graceful shutdown handling
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   process.exit(0);
@@ -201,14 +175,25 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Anime Streaming API Server started successfully!`);
-  console.log(`📡 Server running on port ${PORT}`);
-  console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📊 Status check: http://localhost:${PORT}/api/status`);
-  console.log(`📖 API Info: http://localhost:${PORT}/api/anime/info`);
-  console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🕐 Started at: ${new Date().toISOString()}`);
-});
+async function startServer() {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Anime Streaming API Server started successfully!`);
+      console.log(`📡 Server running on port ${PORT}`);
+      console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
+      console.log(`🗺️ Sitemap: http://localhost:${PORT}/sitemap.xml`);
+      console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`📊 Status check: http://localhost:${PORT}/api/status`);
+      console.log(`📖 API Info: http://localhost:${PORT}/api/anime/info`);
+      console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🕐 Started at: ${new Date().toISOString()}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();

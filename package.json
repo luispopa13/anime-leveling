@@ -7,7 +7,10 @@
     "server": "cd backend && npm run dev",
     "client": "cd frontend && npm start",
     "install-deps": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build": "cd frontend && npm run build"
+    "generate:sitemap": "node scripts/generate-sitemap.js",
+    "build": "npm run generate:sitemap && react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
   "keywords": [],
   "author": "",
