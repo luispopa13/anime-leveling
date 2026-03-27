@@ -177,21 +177,13 @@ process.on('SIGINT', () => {
 
 async function startServer() {
   try {
-    await connectDB();
+    console.log('Skipping DB connection temporarily');
 
     app.listen(PORT, () => {
-      console.log(`🚀 Anime Streaming API Server started successfully!`);
-      console.log(`📡 Server running on port ${PORT}`);
-      console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
-      console.log(`🗺️ Sitemap: http://localhost:${PORT}/sitemap.xml`);
-      console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`📊 Status check: http://localhost:${PORT}/api/status`);
-      console.log(`📖 API Info: http://localhost:${PORT}/api/anime/info`);
-      console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🕐 Started at: ${new Date().toISOString()}`);
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }

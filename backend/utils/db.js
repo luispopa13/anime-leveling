@@ -8,13 +8,17 @@ async function connectDB() {
   }
 
   try {
+    console.log('🔌 Connecting to MongoDB...');
+
     await mongoose.connect(uri, {
-      autoIndex: true,
+      autoIndex: false,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
 
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
+    console.error('❌ MongoDB connection error:', error);
     throw error;
   }
 }
