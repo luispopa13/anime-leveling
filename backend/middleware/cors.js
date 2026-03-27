@@ -1,22 +1,23 @@
-// backend/middleware/cors.js
 const cors = require('cors');
-
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'https://anime-leveling.vercel.app',      // Vercel preview URL
-  'https://animeleveling.com',              // domeniu custom (când îl ai)
-  'https://www.animeleveling.com',
-  process.env.FRONTEND_URL,                 // fallback din env
-].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Permite requests fără origin (mobile, curl, Postman)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    const allowed =
+      // Localhost development
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1') ||
+      // Orice deployment Vercel (preview + production)
+      origin.endsWith('.vercel.app') ||
+      // Domeniu custom când îl ai
+      origin === 'https://animeleveling.com' ||
+      origin === 'https://www.animeleveling.com' ||
+      // Din env var
+      origin === process.env.FRONTEND_URL;
+
+    if (allowed) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked: ${origin}`);
