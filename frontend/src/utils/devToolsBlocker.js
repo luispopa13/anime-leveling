@@ -21,6 +21,7 @@ export function initDevToolsBlocker() {
     Object.defineProperty(img, 'id', {
       get() {
         goHome();
+        return ''; // eslint-disable-line getter-return
       },
     });
     // eslint-disable-next-line no-console

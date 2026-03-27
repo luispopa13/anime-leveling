@@ -60,6 +60,7 @@ export function AnimeFavoritesProvider({ children }) {
     setFavorites([]);
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo(
     () => ({
       favorites,

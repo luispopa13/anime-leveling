@@ -1,17 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Menu, X, Heart } from 'lucide-react';
 import { useAnimeFavorites } from './AnimeFavoritesContext';
-
-// Debounce hook simplu
-function useDebounce(value, delay) {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debouncedValue;
-}
 
 const Header = () => {
   const location = useLocation();
@@ -20,8 +10,6 @@ const Header = () => {
   const { favoritesCount } = useAnimeFavorites();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedQuery    = useDebounce(searchQuery, 300);
-  const pendingSearch     = useRef(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {

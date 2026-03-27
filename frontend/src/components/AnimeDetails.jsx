@@ -196,13 +196,13 @@ const AnimeDetails = () => {
     }, {});
   }, [anime, generatedEpisodes]);
 
-  const toggleEpisodeDropdown = (e, episodeNumber) => {
+  const _toggleEpisodeDropdown = (e, episodeNumber) => {
     e.preventDefault();
     e.stopPropagation();
     setOpenDropdownEpisode((prev) => (prev === episodeNumber ? null : episodeNumber));
   };
 
-  const openProvider = (e, url) => {
+  const _openProvider = (e, url) => {
     e.preventDefault();
     e.stopPropagation();
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -298,7 +298,7 @@ const AnimeDetails = () => {
             <aside className="space-y-6">
               <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
                 <img
-                  src={anime.image} loading="lazy" decoding="async" width={300} height={400}
+                  src={anime.image || `http://localhost:5000/api/placeholder/300/400`}
                   alt={anime.title}
                   className="w-full h-auto object-cover"
                 />
@@ -631,8 +631,8 @@ const AnimeDetails = () => {
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                           {paginatedEpisodes.map((episode) => {
                             const episodeNumber = episode.number;
-                            const providers = episodeProviders[episodeNumber] || [];
-                            const isOpen = openDropdownEpisode === episodeNumber;
+                            const _providers = episodeProviders[episodeNumber] || [];
+                            const _isOpen = openDropdownEpisode === episodeNumber;
 
                             return (
                               <div
@@ -719,7 +719,7 @@ const AnimeDetails = () => {
                           <div key={index} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                             <div className="flex gap-4">
                               <img
-                                src={character.image} loading="lazy" decoding="async" width={60} height={60}
+                                src={character.image || `http://localhost:5000/api/placeholder/60/60`}
                                 alt={character.name}
                                 className="w-16 h-16 rounded-xl object-cover"
                               />
@@ -749,7 +749,7 @@ const AnimeDetails = () => {
                           <div key={index} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                             <div className="flex gap-4">
                               <img
-                                src={member.image} loading="lazy" decoding="async" width={60} height={60}
+                                src={member.image || `http://localhost:5000/api/placeholder/60/60`}
                                 alt={member.name}
                                 className="w-16 h-16 rounded-xl object-cover"
                               />
@@ -780,7 +780,7 @@ const AnimeDetails = () => {
                           >
                             <div className="flex gap-4">
                               <img
-                                src={relation.image} loading="lazy" decoding="async" width={80} height={120}
+                                src={relation.image || `http://localhost:5000/api/placeholder/80/120`}
                                 alt={relation.title}
                                 className="w-20 h-28 rounded-xl object-cover"
                               />
