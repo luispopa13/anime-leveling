@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0f1f" />
+    <meta name="description" content="AnimeLeveling - Watch anime online free" />
+
+    <!-- ── DNS Preconnect — reduce latența pentru resurse externe ── -->
+    <!-- CDN imagini anime -->
+    <link rel="preconnect" href="https://cdn.noitatnemucod.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.noitatnemucod.net" />
+
+    <!-- Provideri video — cel mai important pentru loading rapid -->
+    <link rel="preconnect" href="https://aniwatchtv.to" crossorigin />
+    <link rel="dns-prefetch" href="https://aniwatchtv.to" />
+
+    <link rel="dns-prefetch" href="https://megacloud.tv" />
+    <link rel="dns-prefetch" href="https://s1.megacloud.tv" />
+    <link rel="dns-prefetch" href="https://s2.megacloud.tv" />
+    <link rel="dns-prefetch" href="https://vidsrc.xyz" />
+    <link rel="dns-prefetch" href="https://vidsrc.to" />
+    <link rel="dns-prefetch" href="https://embed.su" />
+
+    <!-- AniList API -->
+    <link rel="preconnect" href="https://graphql.anilist.co" crossorigin />
+    <link rel="dns-prefetch" href="https://graphql.anilist.co" />
+
+    <!-- ── Preload font-uri critice (dacă folosești Google Fonts) ── -->
+    <!-- <link rel="preconnect" href="https://fonts.googleapis.com" /> -->
+    <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /> -->
+
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <title>AnimeLeveling</title>
+
+    <!-- ── Previne FOUC (Flash of Unstyled Content) ── -->
+    <style>
+      body {
+        background-color: #0a0f1f;
+        margin: 0;
+        padding: 0;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

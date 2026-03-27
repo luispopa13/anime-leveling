@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Blocăm paginile care nu trebuie indexate
+Disallow: /api/
+Disallow: /admin/
+Disallow: /search?
+
+# Permitem explicit paginile importante
+Allow: /anime/
+Allow: /search
+
+# Sitemap
+Sitemap: https://animeleveling.com/sitemap.xml
