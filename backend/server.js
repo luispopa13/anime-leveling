@@ -1,21 +1,18 @@
 require('dotenv').config();
 
-const express     = require('express');
-const compression = require('compression');
+const express = require('express');
 const corsMiddleware = require('./middleware/cors');
 
 const animeRoutes = require('./routes/animeRoutes');
 const animeContentRoutes = require('./routes/animeContentRoutes');
 const episodeContentRoutes = require('./routes/episodeContentRoutes');
-const sitemapRoutes        = require('./routes/sitemapRoutes');
-const episodeSourcesRoutes = require('./routes/episodeSources');
+const sitemapRoutes = require('./routes/sitemapRoutes');
 const { connectDB } = require('./utils/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(compression());
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -85,14 +82,7 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
   res.send(svg);
 });
 
-// Cache-Control pentru raspunsuri statice
-app.use('/api/anime/popular',        (req, res, next) => { res.set('Cache-Control', 'public, max-age=1200'); next(); });
-app.use('/api/anime/trending',       (req, res, next) => { res.set('Cache-Control', 'public, max-age=1200'); next(); });
-app.use('/api/anime/top100',         (req, res, next) => { res.set('Cache-Control', 'public, max-age=3600'); next(); });
-app.use('/api/anime/all-categories', (req, res, next) => { res.set('Cache-Control', 'public, max-age=1200'); next(); });
-
 // Routes
-app.use('/api/anime', episodeSourcesRoutes);
 app.use('/api/anime', animeRoutes);
 app.use('/api/content/anime', animeContentRoutes);
 app.use('/api/content/episode', episodeContentRoutes);
@@ -177,13 +167,21 @@ process.on('SIGINT', () => {
 
 async function startServer() {
   try {
-    console.log('Skipping DB connection temporarily');
+    await connectDB();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🚀 Anime Streaming API Server started successfully!`);
+      console.log(`📡 Server running on port ${PORT}`);
+      console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
+      console.log(`🗺️ Sitemap: http://localhost:${PORT}/sitemap.xml`);
+      console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`📊 Status check: http://localhost:${PORT}/api/status`);
+      console.log(`📖 API Info: http://localhost:${PORT}/api/anime/info`);
+      console.log(`⚡ Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🕐 Started at: ${new Date().toISOString()}`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
 }
