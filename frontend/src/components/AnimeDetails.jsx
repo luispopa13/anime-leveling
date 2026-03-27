@@ -19,6 +19,8 @@ import {
 import SEO from './SEO';
 import { animeAPI } from '../services/api';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const slugify = (text) =>
   String(text || '')
     .normalize('NFD')
@@ -56,7 +58,7 @@ const AnimeDetails = () => {
         (data.rating ? Math.round(parseFloat(data.rating) * 10) : '');
 
       const contentRes = await fetch(
-        `http://localhost:5000/api/content/anime/${encodeURIComponent(id)}?title=${encodeURIComponent(
+        `${API_BASE}/content/anime/${encodeURIComponent(id)}?title=${encodeURIComponent(
           data.title || ''
         )}&year=${encodeURIComponent(data.year || '')}&score=${encodeURIComponent(
           score
@@ -196,13 +198,13 @@ const AnimeDetails = () => {
     }, {});
   }, [anime, generatedEpisodes]);
 
-  const _toggleEpisodeDropdown = (e, episodeNumber) => {
+  const toggleEpisodeDropdown = (e, episodeNumber) => {
     e.preventDefault();
     e.stopPropagation();
     setOpenDropdownEpisode((prev) => (prev === episodeNumber ? null : episodeNumber));
   };
 
-  const _openProvider = (e, url) => {
+  const openProvider = (e, url) => {
     e.preventDefault();
     e.stopPropagation();
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -298,7 +300,7 @@ const AnimeDetails = () => {
             <aside className="space-y-6">
               <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
                 <img
-                  src={anime.image || `http://localhost:5000/api/placeholder/300/400`}
+                  src={anime.image}
                   alt={anime.title}
                   className="w-full h-auto object-cover"
                 />
@@ -631,8 +633,8 @@ const AnimeDetails = () => {
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                           {paginatedEpisodes.map((episode) => {
                             const episodeNumber = episode.number;
-                            const _providers = episodeProviders[episodeNumber] || [];
-                            const _isOpen = openDropdownEpisode === episodeNumber;
+                            const providers = episodeProviders[episodeNumber] || [];
+                            const isOpen = openDropdownEpisode === episodeNumber;
 
                             return (
                               <div
@@ -719,7 +721,7 @@ const AnimeDetails = () => {
                           <div key={index} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                             <div className="flex gap-4">
                               <img
-                                src={character.image || `http://localhost:5000/api/placeholder/60/60`}
+                                src={character.image}
                                 alt={character.name}
                                 className="w-16 h-16 rounded-xl object-cover"
                               />
@@ -749,7 +751,7 @@ const AnimeDetails = () => {
                           <div key={index} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                             <div className="flex gap-4">
                               <img
-                                src={member.image || `http://localhost:5000/api/placeholder/60/60`}
+                                src={member.image}
                                 alt={member.name}
                                 className="w-16 h-16 rounded-xl object-cover"
                               />
@@ -780,7 +782,7 @@ const AnimeDetails = () => {
                           >
                             <div className="flex gap-4">
                               <img
-                                src={relation.image || `http://localhost:5000/api/placeholder/80/120`}
+                                src={relation.image}
                                 alt={relation.title}
                                 className="w-20 h-28 rounded-xl object-cover"
                               />
@@ -817,7 +819,7 @@ const AnimeDetails = () => {
                           >
                             <div className="flex gap-4">
                               <img
-                                src={rec.image || `http://localhost:5000/api/placeholder/80/120`}
+                                src={rec.image}
                                 alt={rec.title}
                                 className="w-20 h-28 rounded-xl object-cover"
                               />
