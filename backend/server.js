@@ -1,18 +1,21 @@
 require('dotenv').config();
 
-const express = require('express');
+const express     = require('express');
+const compression = require('compression');
 const corsMiddleware = require('./middleware/cors');
 
 const animeRoutes = require('./routes/animeRoutes');
 const animeContentRoutes = require('./routes/animeContentRoutes');
 const episodeContentRoutes = require('./routes/episodeContentRoutes');
 const sitemapRoutes = require('./routes/sitemapRoutes');
+const episodeSourcesRoutes = require('./routes/episodeSources');
 const { connectDB } = require('./utils/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.use(compression());
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -83,6 +86,7 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
 });
 
 // Routes
+app.use('/api/anime', episodeSourcesRoutes);
 app.use('/api/anime', animeRoutes);
 app.use('/api/content/anime', animeContentRoutes);
 app.use('/api/content/episode', episodeContentRoutes);
