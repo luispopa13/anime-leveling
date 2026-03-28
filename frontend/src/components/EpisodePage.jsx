@@ -164,7 +164,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            <div style={{ height: '480px'}}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
