@@ -4,23 +4,16 @@ const AniList = require('./scrapers/AniList');
 class AnimeService {
   constructor() {
     this.cache = new Map();
-    this.TTL = {
-      homepage : 20 * 60 * 1000,        // 20 min
-      details  :  4 * 60 * 60 * 1000,   // 4 ore
-      episodes :  1 * 60 * 60 * 1000,   // 1 ora
-      top100   :  1 * 60 * 60 * 1000,   // 1 ora
-      search   :  3 * 60 * 1000,        // 3 min
-    };
-    this.cacheTimeout = this.TTL.homepage; // default
+    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
   }
 
   getCacheKey(method, ...args) {
     return `${method}_${args.join('_')}`;
   }
 
-  getFromCache(key, ttl) {
+  getFromCache(key) {
     const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < (ttl || this.TTL.homepage)) {
+    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
     }
     this.cache.delete(key);
@@ -260,7 +253,7 @@ class AnimeService {
 
   async getAnimeDetails(id) {
     const cacheKey = this.getCacheKey('details', id);
-    const cached = this.getFromCache(cacheKey, this.TTL.details);
+    const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
 
     try {
@@ -312,18 +305,21 @@ class AnimeService {
 
   async getAllCategories(perPage = 20) {
     const cacheKey = this.getCacheKey('allCategories', perPage);
-    const cached = this.getFromCache(cacheKey, this.TTL.homepage);
+    const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
 
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
     try {
-      const [popular, trending, popularSeason, upcomingSeason, top100] =
-        await Promise.all([
-          this.getPopularAnime(1, perPage),
-          this.getTrendingAnime(1, perPage),
-          this.getPopularThisSeason(1, perPage),
-          this.getUpcomingNextSeason(1, perPage),
-          this.getTop100Anime(1, Math.min(perPage * 2, 50)),
-        ]);
+      const popular        = await this.getPopularAnime(1, perPage);
+      await sleep(400);
+      const trending       = await this.getTrendingAnime(1, perPage);
+      await sleep(400);
+      const popularSeason  = await this.getPopularThisSeason(1, perPage);
+      await sleep(400);
+      const upcomingSeason = await this.getUpcomingNextSeason(1, perPage);
+      await sleep(400);
+      const top100         = await this.getTop100Anime(1, Math.min(perPage * 2, 50));
 
       const result = {
         popular: popular.data || [],
@@ -463,7 +459,7 @@ class AnimeService {
 
   async getEpisodes(id) {
     const cacheKey = this.getCacheKey('episodes', id);
-    const cached = this.getFromCache(cacheKey, this.TTL.episodes);
+    const cached = this.getFromCache(cacheKey);
     if (cached) return cached;
 
     try {

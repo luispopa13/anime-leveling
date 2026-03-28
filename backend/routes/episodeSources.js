@@ -16,12 +16,6 @@ const EpisodeMapping = mongoose.models.EpisodeMapping ||
     episodes: episodeFields, scrapeStatus: String,
   }));
 
-const EpisodeMapping9anime = mongoose.models.EpisodeMapping9anime ||
-  mongoose.model('EpisodeMapping9anime', new mongoose.Schema({
-    animeId: String, animeSlug: String, animeTitle: String,
-    episodes: episodeFields, scrapeStatus: String,
-  }));
-
 const PROVIDERS = [
   { name: 'aniwatchtv', base: 'https://aniwatchtv.to',  model: () => EpisodeMapping }
 ];
@@ -42,9 +36,6 @@ function setCached(key, data) {
     sourcesCache.delete(oldest[0]);
   }
 }
-
-
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function escapeRegex(str) {
