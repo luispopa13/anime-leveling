@@ -376,16 +376,6 @@ const WatchModal = ({
               </div>
             </div>
           )}
-
-          {isFullPage && !loading && !error && (
-            <div className="px-4 py-2 border-b border-white/5">
-              <p className="text-[11px] text-gray-500 leading-relaxed">
-                Embedded full-page sources may render slightly differently across devices. If playback
-                looks off on mobile, use “Open on AniWatch”.
-              </p>
-            </div>
-          )}
-
           <div className="flex items-center justify-between px-4 py-3 gap-3">
             <button
               onClick={() => hasPrev && goToEp(currentEp - 1)}
