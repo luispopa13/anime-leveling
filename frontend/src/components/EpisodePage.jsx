@@ -26,19 +26,29 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
 
-    // Lock scroll pe body (iOS + Android)
+    // Lock scroll - metoda robusta pentru iOS Safari si Android
     const scrollY = window.scrollY;
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.top      = `-${scrollY}px`;
     document.body.style.width    = '100%';
+    document.documentElement.style.overflow = 'hidden';
+
+    // Previne touchmove pe tot documentul (iOS necesita passive:false)
+    const preventTouch = (e) => {
+      if (e.target.closest('.modal-player-area')) return; // permite touch IN player
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', preventTouch, { passive: false });
 
     return () => {
       window.removeEventListener('keydown', onKey);
+      document.removeEventListener('touchmove', preventTouch);
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top      = '';
       document.body.style.width    = '';
+      document.documentElement.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
   }, [onClose]);
@@ -120,7 +130,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
         </div>
 
         {/* Player */}
-        <div className="relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }} onTouchMove={(e) => e.preventDefault()} onWheel={(e) => e.preventDefault()}>
+        <div className="modal-player-area relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }}>
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
