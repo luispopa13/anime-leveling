@@ -10,8 +10,13 @@ import { animeAPI } from '../services/api';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Watch Modal
+// ─────────────────────────────────────────────────────────────────────────────
+
 const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, animeId, slug, onClose }) => {
   const navigate = useNavigate();
+
   const [sources,   setSources]   = useState([]);
   const [active,    setActive]    = useState(null);
   const [watchUrl,  setWatchUrl]  = useState(null);
@@ -19,6 +24,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
   const [error,     setError]     = useState(null);
   const [currentEp, setCurrentEp] = useState(episodeNumber);
 
+  // Escape key
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -26,7 +32,10 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
   }, [onClose]);
 
   const fetchSources = useCallback(async (ep) => {
-    setLoading(true); setError(null); setSources([]); setActive(null);
+    setLoading(true);
+    setError(null);
+    setSources([]);
+    setActive(null);
     try {
       const res  = await fetch(
         `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}` +
@@ -53,9 +62,9 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
     navigate(`/anime/${animeId}/${slug}/episode/${ep}`, { replace: true });
   };
 
-  const hasPrev    = currentEp > 1;
-  const hasNext    = totalEpisodes ? currentEp < totalEpisodes : true;
-  const iframeSrc  = active?.embedUrl || null;
+  const hasPrev   = currentEp > 1;
+  const hasNext   = totalEpisodes ? currentEp < totalEpisodes : true;
+  const iframeSrc = active?.embedUrl || null;
   const isFullPage = active?.serverId === 'direct';
 
   return (
@@ -68,7 +77,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
         className="w-full flex flex-col rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
         style={{ background: '#0d1117', maxWidth: 960, maxHeight: '95vh' }}
       >
-        {/* Header */}
+        {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <Tv2 className="w-4 h-4 text-violet-400 flex-shrink-0" />
@@ -87,27 +96,32 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
           </div>
         </div>
 
-        {/* Player
-         * clamp(150px, 56.25vw, 780px):
-         *   mobile  375px  → 211px (16:9 exact)
-         *   tablet  768px  → 432px
-         *   desktop 1390px → 780px (capped)
+        {/* ── Player ─────────────────────────────────────────────────────────
          *
-         * Iframe aniwatchtv full-page:
-         *   top: -130px  → taie header-ul aniwatchtv
-         *   height: calc(100% + 130px + 110px) → barele de jos ies din container
-         *   overflow:hidden pe container taie ce iese
-         */}
+         * Containerul are aspect-ratio 16:9 strict (DOAR video, fără bare).
+         * overflow:hidden taie tot ce iese din container.
+         *
+         * Iframe full-page aniwatchtv:
+         *   - top: -130px  → tăiem header + titlu aniwatchtv (sus)
+         *   - height: 100% + 130px + 110px → iframe mai înalt ca containerul
+         *     → barele de jos (Light/AutoPlay/Prev/Next, ~110px) ies din container
+         *     → overflow:hidden le taie
+         *
+         * Rezultat: se vede STRICT zona video, fără niciun element al aniwatchtv.
+         * ────────────────────────────────────────────────────────────────── */}
         <div
           className="relative bg-black flex-shrink-0 w-full overflow-hidden"
-          style={{ height: 'clamp(150px, 56.25vw, 780px)' }}
+          style={{ height: 780 }}
         >
+          {/* Loading */}
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
               <Loader2 className="w-10 h-10 animate-spin text-violet-400" />
               <span className="text-sm text-gray-400">Loading player…</span>
             </div>
           )}
+
+          {/* Error */}
           {!loading && error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center z-10">
               <AlertTriangle className="w-10 h-10 text-yellow-400" />
@@ -127,8 +141,11 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
               </div>
             </div>
           )}
+
+          {/* Iframe */}
           {!loading && !error && iframeSrc && (
             isFullPage ? (
+              // Pagina completă aniwatchtv — clip sus și jos
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
@@ -140,14 +157,15 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
                 title={`${animeTitle} Episode ${currentEp}`}
                 style={{
                   position : 'absolute',
-                  top      : '-130px',
+                  top      : '-130px',          // taie header aniwatchtv
                   left     : 0,
                   width    : '100%',
-                  height   : 'calc(100% + 130px + 110px)',
+                  height   : 'calc(100% + 130px + 110px)', // extinde jos → barele ies din container
                   border   : 'none',
                 }}
               />
             ) : (
+              // Embed direct — iframe perfect 100%
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
@@ -160,6 +178,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
               />
             )
           )}
+
           {!loading && !error && !iframeSrc && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Play className="w-10 h-10 text-gray-600" />
@@ -168,8 +187,10 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
           )}
         </div>
 
-        {/* Controls */}
+        {/* ── Controls ───────────────────────────────────────────────────── */}
         <div className="flex-shrink-0 border-t border-white/10">
+
+          {/* Server selector — doar dacă avem embed-uri multiple */}
           {!loading && !error && sources.length > 1 && (
             <div className="px-4 py-3 border-b border-white/5">
               <div className="flex items-center gap-2 mb-2">
@@ -198,6 +219,8 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
               </div>
             </div>
           )}
+
+          {/* Prev / Next episode */}
           <div className="flex items-center justify-between px-4 py-3 gap-3">
             <button
               onClick={() => hasPrev && goToEp(currentEp - 1)}
@@ -212,9 +235,11 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
               <span>Prev</span>
               {hasPrev && <span className="text-gray-400 text-xs hidden sm:inline">Ep {currentEp - 1}</span>}
             </button>
+
             <span className="text-xs text-gray-500 flex-shrink-0">
               Episode {currentEp}{totalEpisodes ? ` / ${totalEpisodes}` : ''}
             </span>
+
             <button
               onClick={() => hasNext && goToEp(currentEp + 1)}
               disabled={!hasNext}
@@ -234,6 +259,10 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Info Panel
+// ─────────────────────────────────────────────────────────────────────────────
 
 const InfoPanel = ({ icon, title, text, accent = 'violet' }) => {
   const accentMap = {
@@ -258,6 +287,10 @@ const InfoPanel = ({ icon, title, text, accent = 'violet' }) => {
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EpisodePage
+// ─────────────────────────────────────────────────────────────────────────────
+
 const EpisodePage = () => {
   const { id, slug, episodeNumber } = useParams();
   const numericEpisode = parseInt(episodeNumber, 10);
@@ -271,11 +304,17 @@ const EpisodePage = () => {
   useEffect(() => {
     if (!id || !numericEpisode) return;
     const fetchData = async () => {
-      setLoading(true); setError(null);
+      setLoading(true);
+      setError(null);
       try {
         const animeData = await animeAPI.getDetails(id);
         setAnime(animeData);
-        const score = animeData.averageScore ?? animeData.meanScore ?? (animeData.rating ? Math.round(parseFloat(animeData.rating) * 10) : '');
+
+        const score =
+          animeData.averageScore ??
+          animeData.meanScore ??
+          (animeData.rating ? Math.round(parseFloat(animeData.rating) * 10) : '');
+
         const res = await fetch(
           `${API_BASE}/content/episode/${encodeURIComponent(id)}/${encodeURIComponent(numericEpisode)}` +
           `?title=${encodeURIComponent(animeData.title || '')}` +
@@ -297,7 +336,8 @@ const EpisodePage = () => {
   const totalEps = anime?.totalEpisodes && anime.totalEpisodes !== 'Unknown'
     ? parseInt(anime.totalEpisodes, 10) : null;
 
-  const prevLink = numericEpisode > 1 ? `/anime/${id}/${slug}/episode/${numericEpisode - 1}` : null;
+  const prevLink = numericEpisode > 1
+    ? `/anime/${id}/${slug}/episode/${numericEpisode - 1}` : null;
   const nextLink = `/anime/${id}/${slug}/episode/${numericEpisode + 1}`;
 
   if (loading) {
@@ -350,9 +390,14 @@ const EpisodePage = () => {
       <div className="min-h-screen bg-[#0a0f1f] text-white">
         <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
 
+          {/* Back + Breadcrumb */}
           <div className="flex items-center gap-4 flex-wrap">
-            <Link to={`/anime/${id}/${slug}`}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-gray-300 hover:text-white transition flex-shrink-0">
+            <Link
+              to={`/anime/${id}/${slug}`}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl
+                         bg-white/5 hover:bg-white/10 border border-white/10
+                         text-sm text-gray-300 hover:text-white transition flex-shrink-0"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back
             </Link>
@@ -366,24 +411,41 @@ const EpisodePage = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-8">
+
+            {/* Sidebar */}
             <aside className="space-y-4">
-              <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative group cursor-pointer" onClick={openPlayer}>
-                <img src={anime.image || `${API_BASE}/placeholder/300/400`} alt={anime.title}
-                  className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div
+                className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative group cursor-pointer"
+                onClick={openPlayer}
+              >
+                <img
+                  src={anime.image || `${API_BASE}/placeholder/300/400`}
+                  alt={anime.title}
+                  className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <div className="w-16 h-16 rounded-full bg-violet-600 flex items-center justify-center shadow-2xl shadow-violet-500/50">
                     <Play className="w-7 h-7 fill-white ml-0.5" />
                   </div>
                 </div>
               </div>
-              <button onClick={openPlayer}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 shadow-lg shadow-violet-500/30 transition-all duration-200 active:scale-[0.97]">
+
+              <button
+                onClick={openPlayer}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-base
+                           bg-gradient-to-r from-violet-600 to-pink-600
+                           hover:from-violet-500 hover:to-pink-500
+                           shadow-lg shadow-violet-500/30
+                           transition-all duration-200 active:scale-[0.97]"
+              >
                 <Play className="w-5 h-5 fill-white" />
                 Watch Now
               </button>
+
               <div className="grid grid-cols-2 gap-2">
                 {prevLink ? (
-                  <Link to={prevLink} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-xs text-gray-300 hover:text-white">
+                  <Link to={prevLink}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-xs text-gray-300 hover:text-white">
                     <ArrowLeft className="w-3.5 h-3.5" /> Ep {numericEpisode - 1}
                   </Link>
                 ) : (
@@ -391,34 +453,52 @@ const EpisodePage = () => {
                     <ArrowLeft className="w-3.5 h-3.5" /> Prev
                   </div>
                 )}
-                <Link to={nextLink} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600/80 to-pink-600/80 hover:from-violet-500 hover:to-pink-500 border border-violet-400/20 transition text-xs text-white">
+                <Link to={nextLink}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600/80 to-pink-600/80 hover:from-violet-500 hover:to-pink-500 border border-violet-400/20 transition text-xs text-white">
                   Ep {numericEpisode + 1} <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </aside>
 
+            {/* Main */}
             <main>
               <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 md:p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.10),transparent_30%)] pointer-events-none" />
                 <div className="relative space-y-7">
+
                   <div>
                     <h1 className="text-3xl md:text-4xl font-black tracking-tight">{anime.title}</h1>
                     <p className="text-violet-300 font-semibold mt-1">Episode {numericEpisode}</p>
                   </div>
+
                   {(episodeContent?.customIntro || episodeContent?.watchGuide || episodeContent?.whyWatch) && (
                     <div className="space-y-4">
-                      {episodeContent?.customIntro && <InfoPanel icon={<Sparkles className="w-5 h-5 text-violet-300" />} title="Overview" text={episodeContent.customIntro} accent="violet" />}
-                      {episodeContent?.watchGuide && <InfoPanel icon={<Radio className="w-5 h-5 text-red-300" />} title="Where to watch" text={episodeContent.watchGuide} accent="red" />}
-                      {episodeContent?.whyWatch && <InfoPanel icon={<Orbit className="w-5 h-5 text-cyan-300" />} title="Why watch this episode?" text={episodeContent.whyWatch} accent="cyan" />}
+                      {episodeContent?.customIntro && (
+                        <InfoPanel icon={<Sparkles className="w-5 h-5 text-violet-300" />} title="Overview" text={episodeContent.customIntro} accent="violet" />
+                      )}
+                      {episodeContent?.watchGuide && (
+                        <InfoPanel icon={<Radio className="w-5 h-5 text-red-300" />} title="Where to watch" text={episodeContent.watchGuide} accent="red" />
+                      )}
+                      {episodeContent?.whyWatch && (
+                        <InfoPanel icon={<Orbit className="w-5 h-5 text-cyan-300" />} title="Why watch this episode?" text={episodeContent.whyWatch} accent="cyan" />
+                      )}
                     </div>
                   )}
+
                   <div className="flex justify-center py-2">
-                    <button onClick={openPlayer}
-                      className="flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 shadow-xl shadow-violet-500/25 transition-all duration-200 active:scale-[0.97]">
+                    <button
+                      onClick={openPlayer}
+                      className="flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg
+                                 bg-gradient-to-r from-violet-600 to-pink-600
+                                 hover:from-violet-500 hover:to-pink-500
+                                 shadow-xl shadow-violet-500/25
+                                 transition-all duration-200 active:scale-[0.97]"
+                    >
                       <Play className="w-6 h-6 fill-white" />
                       Watch Episode {numericEpisode}
                     </button>
                   </div>
+
                   <div className="flex flex-col sm:flex-row gap-3">
                     {prevLink ? (
                       <Link to={prevLink} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition">
@@ -433,6 +513,7 @@ const EpisodePage = () => {
                       Episode {numericEpisode + 1} <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
+
                 </div>
               </div>
             </main>
