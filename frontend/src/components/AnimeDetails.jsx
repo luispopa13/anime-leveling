@@ -83,7 +83,13 @@ const AnimeDetails = () => {
 
     } catch (err) {
       console.error('Error fetching anime details:', err);
-      setError('Failed to load anime details');
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setError('Cannot connect to server. The backend may be starting up — please wait 30 seconds and try again.');
+      } else if (err.message?.includes('404')) {
+        setError('Anime not found.');
+      } else {
+        setError(`Failed to load anime details: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -252,8 +258,17 @@ const AnimeDetails = () => {
 
   if (error || !anime) {
     return (
-      <div className="min-h-screen bg-[#0a0f1f] flex items-center justify-center">
-        <div className="text-red-400 text-xl">{error || 'Anime not found'}</div>
+      <div className="min-h-screen bg-[#0a0f1f] flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="text-5xl mb-4">⚠️</div>
+          <p className="text-red-400 text-lg mb-6">{error || 'Anime not found'}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
