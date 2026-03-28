@@ -13,7 +13,7 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // Watch Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
+const WatchModal = ({ animeSlug, animeTitle, englishTitle = '', romajiTitle = '', episodeNumber, onClose }) => {
   const [sources,   setSources]   = useState([]);
   const [active,    setActive]    = useState(null);
   const [watchUrl,  setWatchUrl]  = useState(null);
@@ -21,21 +21,11 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
   const [error,     setError]     = useState(null);
   const [useIframe, setUseIframe] = useState(false);
 
-  // Escape key + lock body scroll when modal open
+  // Escape key
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
-
-    // Previne scroll pe body si pe pagina din spate
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
-
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-      document.body.style.touchAction = '';
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   const fetchSources = useCallback(async () => {
@@ -115,11 +105,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
         </div>
 
         {/* Player */}
-        <div
-          className="relative bg-black flex-shrink-0"
-          style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }}
-          onTouchMove={(e) => e.preventDefault()}
-        >
+        <div className="relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9' }}>
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
@@ -148,7 +134,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', touchAction: 'none' }}>
+            <div className="w-full h-full overflow-hidden" style={{ position: 'relative' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
@@ -356,8 +342,10 @@ const EpisodePage = () => {
 
       {showPlayer && (
         <WatchModal
-          animeSlug={slug}           /* slug-ul din URL: "naruto", "attack-on-titan" */
-          animeTitle={anime.title}   /* titlul exact din AniList: "Naruto" */
+          animeSlug={slug}
+          animeTitle={anime.title}
+          englishTitle={anime.englishTitle || ''}
+          romajiTitle={anime.romajiTitle || ''}
           episodeNumber={numericEpisode}
           onClose={closePlayer}
         />
