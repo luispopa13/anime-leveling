@@ -273,7 +273,7 @@ async function tryProvider(provider, urlSlug, titlesInput, epNum) {
   }
   if (!result) result = await findAnimeInDb(Model, urlSlug, titles[0]);
   if (!result) {
-    console.log(`[${provider.name}] Not found for "${urlSlug}" / "${aniTitle}"`);
+    console.log(`[${provider.name}] Not found for "${urlSlug}" / "${titles[0]}"`);
     return null;
   }
 
