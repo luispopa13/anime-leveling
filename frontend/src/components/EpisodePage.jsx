@@ -13,7 +13,7 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // Watch Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WatchModal = ({ animeSlug, animeTitle, englishTitle = '', romajiTitle = '', episodeNumber, onClose }) => {
+const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
   const [sources,   setSources]   = useState([]);
   const [active,    setActive]    = useState(null);
   const [watchUrl,  setWatchUrl]  = useState(null);
@@ -21,11 +21,28 @@ const WatchModal = ({ animeSlug, animeTitle, englishTitle = '', romajiTitle = ''
   const [error,     setError]     = useState(null);
   const [useIframe, setUseIframe] = useState(false);
 
-  // Escape key
+  // Escape key + scroll lock
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    const noScroll = (e) => e.preventDefault();
+    document.addEventListener('wheel',     noScroll, { passive: false });
+    document.addEventListener('touchmove', noScroll, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('wheel',     noScroll);
+      document.removeEventListener('touchmove', noScroll);
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
+    };
   }, [onClose]);
 
   const fetchSources = useCallback(async () => {
@@ -105,7 +122,7 @@ const WatchModal = ({ animeSlug, animeTitle, englishTitle = '', romajiTitle = ''
         </div>
 
         {/* Player */}
-        <div className="relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9' }}>
+        <div className="relative bg-black flex-shrink-0" style={{ height: '480px', overflow: 'hidden' }}>
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
@@ -134,20 +151,27 @@ const WatchModal = ({ animeSlug, animeTitle, englishTitle = '', romajiTitle = ''
           )}
 
           {!loading && !error && iframeSrc && (
-            <div className="w-full h-full overflow-hidden" style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
                 style={
                   useIframe && !active
                     ? {
-                        // Taie header-ul aniwatchtv (~120px) și arată direct playerul
-                        width     : '100%',
-                        height    : '280%',
-                        marginTop : '-120px',
-                        border    : 'none',
+                        position : 'absolute',
+                        top      : '-130px',
+                        left     : 0,
+                        width    : '100%',
+                        height   : 'calc(100% + 130px + 110px)',
+                        border   : 'none',
                       }
-                    : { width: '100%', height: '100%', border: 'none' }
+                    : {
+                        position : 'absolute',
+                        inset    : 0,
+                        width    : '100%',
+                        height   : '100%',
+                        border   : 'none',
+                      }
                 }
                 allowFullScreen
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
@@ -342,10 +366,8 @@ const EpisodePage = () => {
 
       {showPlayer && (
         <WatchModal
-          animeSlug={slug}
-          animeTitle={anime.title}
-          englishTitle={anime.englishTitle || ''}
-          romajiTitle={anime.romajiTitle || ''}
+          animeSlug={slug}           /* slug-ul din URL: "naruto", "attack-on-titan" */
+          animeTitle={anime.title}   /* titlul exact din AniList: "Naruto" */
           episodeNumber={numericEpisode}
           onClose={closePlayer}
         />
