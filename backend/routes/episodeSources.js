@@ -26,6 +26,25 @@ const PROVIDERS = [
   { name: 'aniwatchtv', base: 'https://aniwatchtv.to',  model: () => EpisodeMapping },
   { name: '9animetv',   base: 'https://9animetv.to',    model: () => EpisodeMapping9anime },
 ];
+// ── In-memory cache pentru embed URL-uri (5 minute) ───────────────────────────
+const sourcesCache = new Map();
+const SOURCES_TTL  = 5 * 60 * 1000;
+
+function getCached(key) {
+  const hit = sourcesCache.get(key);
+  if (hit && Date.now() - hit.ts < SOURCES_TTL) return hit.data;
+  sourcesCache.delete(key);
+  return null;
+}
+function setCached(key, data) {
+  sourcesCache.set(key, { data, ts: Date.now() });
+  if (sourcesCache.size > 500) {
+    const oldest = [...sourcesCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
+    sourcesCache.delete(oldest[0]);
+  }
+}
+
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
