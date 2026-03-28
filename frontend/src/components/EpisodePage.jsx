@@ -164,26 +164,48 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div className="w-full h-full overflow-hidden" style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
                 style={
                   useIframe && !active
                     ? {
-                        // Taie header-ul aniwatchtv (~120px) și arată direct playerul
+                        position  : 'absolute',
+                        top       : '-80px',
+                        left      : 0,
                         width     : '100%',
-                        height    : '280%',
-                        marginTop : '-120px',
+                        height    : 'calc(100% + 80px + 80px)',
                         border    : 'none',
+                        pointerEvents: 'none',
                       }
-                    : { width: '100%', height: '100%', border: 'none' }
+                    : {
+                        position  : 'absolute',
+                        inset     : 0,
+                        width     : '100%',
+                        height    : '100%',
+                        border    : 'none',
+                        pointerEvents: 'none',
+                      }
                 }
                 allowFullScreen
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
                 referrerPolicy="origin"
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-pointer-lock"
                 title={`${animeTitle} Episode ${episodeNumber}`}
+              />
+              {/* Overlay transparent care preia toate event-urile mouse/touch */}
+              {/* Previne scroll, click pe elemente aniwatchtv, dar pauzarea video tot functioneaza */}
+              <div
+                style={{
+                  position   : 'absolute',
+                  inset      : 0,
+                  zIndex     : 10,
+                  cursor     : 'default',
+                }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                onContextMenu={(e) => e.preventDefault()}
               />
             </div>
           )}
