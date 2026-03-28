@@ -25,32 +25,22 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
-
-    // Lock scroll - metoda robusta pentru iOS Safari si Android
     const scrollY = window.scrollY;
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.top      = `-${scrollY}px`;
     document.body.style.width    = '100%';
-    document.documentElement.style.overflow = 'hidden';
-
-    // Previne touchmove si wheel pe tot documentul
-    const preventScroll = (e) => {
-      if (e.target.closest('.modal-player-area')) return;
-      e.preventDefault();
-    };
+    const preventScroll = (e) => e.preventDefault();
+    document.addEventListener('wheel',     preventScroll, { passive: false });
     document.addEventListener('touchmove', preventScroll, { passive: false });
-    document.addEventListener('wheel', preventScroll, { passive: false });
-
     return () => {
       window.removeEventListener('keydown', onKey);
+      document.removeEventListener('wheel',     preventScroll);
       document.removeEventListener('touchmove', preventScroll);
-      document.removeEventListener('wheel', preventScroll);
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top      = '';
       document.body.style.width    = '';
-      document.documentElement.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
   }, [onClose]);
@@ -103,16 +93,13 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
       style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(12px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      onWheel={(e) => e.preventDefault()}
-      onTouchMove={(e) => e.preventDefault()}
-      onScroll={(e) => e.preventDefault()}
     >
       <div
-        className="w-full max-w-5xl rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-white/10 shadow-2xl flex flex-col"
-        style={{ background: '#0d1117', maxHeight: '100dvh' }}
+        className="w-full max-w-5xl rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col"
+        style={{ background: '#0d1117', maxHeight: '92vh' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
@@ -135,7 +122,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
         </div>
 
         {/* Player */}
-        <div className="modal-player-area relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }}>
+        <div className="relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9' }}>
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
@@ -164,28 +151,27 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div style={{ height: '480px'}}>
+            <div style={{ height: '470px' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
                 style={
                   useIframe && !active
                     ? {
-                        position  : 'absolute',
-                        top       : '-80px',
-                        left      : 0,
-                        width     : '100%',
-                        height    : 'calc(100% + 80px + 80px)',
-                        border    : 'none',
-                        pointerEvents: 'none',
+                        // Clip: taie header aniwatchtv sus (130px) si bare jos (110px)
+                        position : 'absolute',
+                        top      : '-130px',
+                        left     : 0,
+                        width    : '100%',
+                        height   : 'calc(100% + 130px + 110px)',
+                        border   : 'none',
                       }
                     : {
-                        position  : 'absolute',
-                        inset     : 0,
-                        width     : '100%',
-                        height    : '100%',
-                        border    : 'none',
-                        pointerEvents: 'none',
+                        position : 'absolute',
+                        inset    : 0,
+                        width    : '100%',
+                        height   : '100%',
+                        border   : 'none',
                       }
                 }
                 allowFullScreen
@@ -193,19 +179,6 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
                 referrerPolicy="origin"
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-pointer-lock"
                 title={`${animeTitle} Episode ${episodeNumber}`}
-              />
-              {/* Overlay transparent care preia toate event-urile mouse/touch */}
-              {/* Previne scroll, click pe elemente aniwatchtv, dar pauzarea video tot functioneaza */}
-              <div
-                style={{
-                  position   : 'absolute',
-                  inset      : 0,
-                  zIndex     : 10,
-                  cursor     : 'default',
-                }}
-                onWheel={(e) => e.stopPropagation()}
-                onTouchMove={(e) => e.stopPropagation()}
-                onContextMenu={(e) => e.preventDefault()}
               />
             </div>
           )}
