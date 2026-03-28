@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Loader2, Orbit,
@@ -14,7 +14,7 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // Watch Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, animeId, slug, onClose, prefetchRef: externalPrefetchRef }) => {
+const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, animeId, slug, onClose }) => {
   const navigate = useNavigate();
 
   const [sources,   setSources]   = useState([]);
@@ -23,9 +23,6 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
   const [currentEp, setCurrentEp] = useState(episodeNumber);
-  // Folosim ref-ul extern (de la EpisodePage) sau unul intern
-  const internalRef = useRef(null);
-  const prefetchRef = externalPrefetchRef || internalRef;
 
   // Escape key
   useEffect(() => {
@@ -34,27 +31,18 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const buildSourceUrl = (ep) =>
-    `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}` +
-    `?title=${encodeURIComponent(animeTitle || '')}`;
-
   const fetchSources = useCallback(async (ep) => {
     setLoading(true);
     setError(null);
     setSources([]);
     setActive(null);
     try {
-      // Folosește datele prefetch-uite dacă există (pornite la hover)
-      let data;
-      if (prefetchRef.current) {
-        data = await prefetchRef.current;
-        prefetchRef.current = null; // reset după utilizare
-      } else {
-        const res = await fetch(buildSourceUrl(ep));
-        data = await res.json();
-      }
-
-      if (!data?.success) { setError(data?.message || 'No sources available.'); return; }
+      const res  = await fetch(
+        `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}` +
+        `?title=${encodeURIComponent(animeTitle || '')}`
+      );
+      const data = await res.json();
+      if (!data.success) { setError(data.message || 'No sources available.'); return; }
       setWatchUrl(data.watchUrl);
       if (data.sources?.length > 0) {
         setSources(data.sources);
@@ -123,7 +111,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
          * ────────────────────────────────────────────────────────────────── */}
         <div
           className="relative bg-black flex-shrink-0 w-full overflow-hidden"
-          style={{ height: '480px' }}
+          style={{ height: 40 }}
         >
           {/* Loading */}
           {loading && (
@@ -312,8 +300,6 @@ const EpisodePage = () => {
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
   const [showPlayer,     setShowPlayer]     = useState(false);
-  // Prefetch ref — partajat cu WatchModal prin prop
-  const prefetchPromise = useRef(null);
 
   useEffect(() => {
     if (!id || !numericEpisode) return;
@@ -346,15 +332,6 @@ const EpisodePage = () => {
 
   const openPlayer  = useCallback(() => setShowPlayer(true),  []);
   const closePlayer = useCallback(() => setShowPlayer(false), []);
-
-  // Pornește request-ul la hover — până apasă userul, răspunsul e (aproape) gata
-  const handlePrefetch = useCallback(() => {
-    if (!anime || prefetchPromise.current) return;
-    const url =
-      `${API_BASE}/anime/sources/${encodeURIComponent(slug)}/${numericEpisode}` +
-      `?title=${encodeURIComponent(anime.title || '')}`;
-    prefetchPromise.current = fetch(url).then(r => r.json()).catch(() => null);
-  }, [anime, slug, numericEpisode]);
 
   const totalEps = anime?.totalEpisodes && anime.totalEpisodes !== 'Unknown'
     ? parseInt(anime.totalEpisodes, 10) : null;
@@ -407,7 +384,6 @@ const EpisodePage = () => {
           animeId={id}
           slug={slug}
           onClose={closePlayer}
-          prefetchRef={prefetchPromise}
         />
       )}
 
@@ -512,8 +488,6 @@ const EpisodePage = () => {
                   <div className="flex justify-center py-2">
                     <button
                       onClick={openPlayer}
-                      onMouseEnter={handlePrefetch}
-                      onTouchStart={handlePrefetch}
                       className="flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg
                                  bg-gradient-to-r from-violet-600 to-pink-600
                                  hover:from-violet-500 hover:to-pink-500
