@@ -160,7 +160,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
                   top      : '-80px',          // taie header aniwatchtv
                   left     : 0,
                   width    : '100%',
-                  height   : 'calc(100% 30px + 130px)',   // extinde jos → barele ies din container
+                  height   : 'calc(100% 30px + 30px)',   // extinde jos → barele ies din container
                   border   : 'none',
                 }}
               />
