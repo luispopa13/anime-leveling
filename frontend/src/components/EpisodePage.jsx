@@ -111,7 +111,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
          * ────────────────────────────────────────────────────────────────── */}
         <div
           className="relative bg-black flex-shrink-0 w-full overflow-hidden"
-          style={{ height: 480 }}
+          style={{ height: 40 }}
         >
           {/* Loading */}
           {loading && (
@@ -160,7 +160,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
                   top      : '-130px',          // taie header aniwatchtv
                   left     : 0,
                   width    : '100%',
-                  height   : 'calc(100% + 30px + 310px)', // extinde jos → barele ies din container
+                  height   : 'calc(100% + 130px + 110px)', // extinde jos → barele ies din container
                   border   : 'none',
                 }}
               />
