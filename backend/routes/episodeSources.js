@@ -129,6 +129,24 @@ async function findAnimeInDb(Model, urlSlug, titleFromAniList) {
     candidates.push({ mapping: doc, strategy, confidence });
   }
 
+  // ── Strategie 0: AniList ID/Slug direct — match perfect ────────────────────
+  // Funcționează pentru anime cu titluri complet diferite (ex: My Star = Oshi no Ko)
+  if (titleFromAniList) {
+    // Cauta dupa anilistSlug (ex: "oshi-no-ko")
+    const aniSlugDoc = await Model.findOne({
+      anilistSlug  : urlSlug,
+      scrapeStatus : { $ne: 'error' },
+    }).lean();
+    if (aniSlugDoc) addCandidate(aniSlugDoc, 'anilist-slug', 1.0);
+
+    // Cauta dupa anilistTitle exact
+    const aniTitleDoc = await Model.findOne({
+      anilistTitle : titleFromAniList,
+      scrapeStatus : { $ne: 'error' },
+    }).lean();
+    if (aniTitleDoc) addCandidate(aniTitleDoc, 'anilist-title', 1.0);
+  }
+
   // ── Strategie 1: slug exact match (ex: "naruto" → "naruto-677") ─────────────
   const exactDocs = await Model.find({
     animeSlug : { $regex: `^${escapeRegex(urlSlug)}-\\d+$`, $options: 'i' },
