@@ -21,20 +21,26 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
   const [error,     setError]     = useState(null);
   const [useIframe, setUseIframe] = useState(false);
 
-  // Escape key + lock body scroll when modal open
+  // Escape key + lock body scroll
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
 
-    // Previne scroll pe body si pe pagina din spate
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Previne scroll pe pagina din spate
+    const prevOverflow    = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    const prevPosition    = document.body.style.position;
+    document.body.style.overflow    = 'hidden';
     document.body.style.touchAction = 'none';
+    document.body.style.position    = 'fixed';
+    document.body.style.width       = '100%';
 
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-      document.body.style.touchAction = '';
+      document.body.style.overflow    = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+      document.body.style.position    = prevPosition;
+      document.body.style.width       = '';
     };
   }, [onClose]);
 
@@ -86,13 +92,13 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 md:p-6"
       style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(12px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-5xl rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col"
-        style={{ background: '#0d1117', maxHeight: '92vh' }}
+        className="w-full max-w-5xl rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-white/10 shadow-2xl flex flex-col"
+        style={{ background: '#0d1117', maxHeight: '100dvh' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
@@ -118,7 +124,8 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
         <div
           className="relative bg-black flex-shrink-0"
           style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }}
-          onTouchMove={(e) => e.preventDefault()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
         >
 
           {loading && (
@@ -148,7 +155,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', touchAction: 'none' }}>
+            <div className="w-full h-full overflow-hidden" style={{ position: 'relative' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}

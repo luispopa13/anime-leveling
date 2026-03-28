@@ -131,15 +131,32 @@ async function findAnimeInDb(Model, urlSlug, titleFromAniList) {
 
   // ── Strategie 0: AniList ID/Slug direct — match perfect ────────────────────
   // Funcționează pentru anime cu titluri complet diferite (ex: My Star = Oshi no Ko)
-  if (titleFromAniList) {
-    // Cauta dupa anilistSlug (ex: "oshi-no-ko")
+  // Strippuieste "season-3", "part-2", "s3" etc. din slug pentru a gasi seria
+  function stripSeasonFromSlug(s) {
+    return (s || '')
+      .replace(/-?season-?\d+/gi, '')
+      .replace(/-?part-?\d+/gi, '')
+      .replace(/-?s\d+$/gi, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  // Variante de slug de incercat
+  const slugVariants = [...new Set([
+    urlSlug,
+    stripSeasonFromSlug(urlSlug),
+  ])].filter(Boolean);
+
+  for (const sv of slugVariants) {
     const aniSlugDoc = await Model.findOne({
-      anilistSlug  : urlSlug,
+      anilistSlug  : sv,
       scrapeStatus : { $ne: 'error' },
     }).lean();
-    if (aniSlugDoc) addCandidate(aniSlugDoc, 'anilist-slug', 1.0);
+    if (aniSlugDoc) { addCandidate(aniSlugDoc, 'anilist-slug', 1.0); break; }
+  }
 
-    // Cauta dupa anilistTitle exact
+  // Cauta dupa anilistTitle exact
+  if (titleFromAniList) {
     const aniTitleDoc = await Model.findOne({
       anilistTitle : titleFromAniList,
       scrapeStatus : { $ne: 'error' },
