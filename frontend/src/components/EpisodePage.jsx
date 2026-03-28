@@ -34,24 +34,23 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const fetchSources = useCallback(async (ep) => {
-    // URL construit local — nu e nevoie în deps array
-    const buildUrl = () =>
-      `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}` +
-      `?title=${encodeURIComponent(animeTitle || '')}`;
+  const buildSourceUrl = (ep) =>
+    `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}` +
+    `?title=${encodeURIComponent(animeTitle || '')}`;
 
+  const fetchSources = useCallback(async (ep) => {
     setLoading(true);
     setError(null);
     setSources([]);
     setActive(null);
     try {
-      // prefetchRef e ref → nu se pune în dependency array
+      // Folosește datele prefetch-uite dacă există (pornite la hover)
       let data;
       if (prefetchRef.current) {
         data = await prefetchRef.current;
-        prefetchRef.current = null;
+        prefetchRef.current = null; // reset după utilizare
       } else {
-        const res = await fetch(buildUrl());
+        const res = await fetch(buildSourceUrl(ep));
         data = await res.json();
       }
 
@@ -66,8 +65,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
       }
     } catch { setError('Failed to connect to server.'); }
     finally   { setLoading(false); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animeSlug, animeTitle]); // prefetchRef e ref stabil — nu cauzează re-render
+  }, [animeSlug, animeTitle]);
 
   useEffect(() => { fetchSources(currentEp); }, [currentEp, fetchSources]);
 
@@ -125,7 +123,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
          * ────────────────────────────────────────────────────────────────── */}
         <div
           className="relative bg-black flex-shrink-0 w-full overflow-hidden"
-          style={{ height: "480px"}}
+          style={{ height: '480px' }}
         >
           {/* Loading */}
           {loading && (
