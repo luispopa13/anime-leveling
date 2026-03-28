@@ -23,8 +23,7 @@ const EpisodeMapping9anime = mongoose.models.EpisodeMapping9anime ||
   }));
 
 const PROVIDERS = [
-  { name: 'aniwatchtv', base: 'https://aniwatchtv.to',  model: () => EpisodeMapping },
-  { name: '9animetv',   base: 'https://9animetv.to',    model: () => EpisodeMapping9anime },
+  { name: 'aniwatchtv', base: 'https://aniwatchtv.to',  model: () => EpisodeMapping }
 ];
 // ── In-memory cache pentru embed URL-uri (5 minute) ───────────────────────────
 const sourcesCache = new Map();
