@@ -21,26 +21,25 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
   const [error,     setError]     = useState(null);
   const [useIframe, setUseIframe] = useState(false);
 
-  // Escape key + lock body scroll
+  // Escape key + scroll lock
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
 
-    // Previne scroll pe pagina din spate
-    const prevOverflow    = document.body.style.overflow;
-    const prevTouchAction = document.body.style.touchAction;
-    const prevPosition    = document.body.style.position;
-    document.body.style.overflow    = 'hidden';
-    document.body.style.touchAction = 'none';
-    document.body.style.position    = 'fixed';
-    document.body.style.width       = '100%';
+    // Lock scroll pe body (iOS + Android)
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top      = `-${scrollY}px`;
+    document.body.style.width    = '100%';
 
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow    = prevOverflow;
-      document.body.style.touchAction = prevTouchAction;
-      document.body.style.position    = prevPosition;
-      document.body.style.width       = '';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top      = '';
+      document.body.style.width    = '';
+      window.scrollTo(0, scrollY);
     };
   }, [onClose]);
 
@@ -121,12 +120,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
         </div>
 
         {/* Player */}
-        <div
-          className="relative bg-black flex-shrink-0"
-          style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }}
-          onTouchMove={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-        >
+        <div className="relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }} onTouchMove={(e) => e.preventDefault()} onWheel={(e) => e.preventDefault()}>
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
