@@ -25,6 +25,8 @@ const HomePage = () => {
         setError(null);
         setSectionErrors({});
 
+        console.log('Fetching anime data...');
+
         // Fetch data with individual error handling
         const fetchPromises = [
           animeAPI.getPopular().catch(err => ({ error: 'popular', message: err.message })),
@@ -35,6 +37,8 @@ const HomePage = () => {
         ];
 
         const results = await Promise.all(fetchPromises);
+        
+        console.log('API Results:', results);
 
         const newSections = {
           popular: [],
@@ -59,12 +63,15 @@ const HomePage = () => {
           } else if (result && Array.isArray(result)) {
             // Direct array response
             newSections[sectionName] = result;
+            console.log(`${sectionName} loaded:`, result.length, 'items');
           } else if (result && result.data && Array.isArray(result.data)) {
             // Response with data property
             newSections[sectionName] = result.data;
+            console.log(`${sectionName} loaded:`, result.data.length, 'items');
           } else if (result && result.results && Array.isArray(result.results)) {
             // Response with results property
             newSections[sectionName] = result.results;
+            console.log(`${sectionName} loaded:`, result.results.length, 'items');
           } else {
             console.warn(`Unexpected data structure for ${sectionName}:`, result);
             newSections[sectionName] = [];
@@ -95,6 +102,7 @@ const HomePage = () => {
   }, []);
 
   const Section = ({ title, data, emoji, sectionKey }) => {
+    console.log(`Rendering section ${title}:`, data);
     
     return (
       <section className="mb-16">
@@ -119,7 +127,7 @@ const HomePage = () => {
             )}
           </div>
         ) : data && Array.isArray(data) && data.length > 0 ? (
-          <div className="grid justify-items-center grid-cols-[repeat(auto-fill,minmax(380px,1fr))] gap-8">
+          <div className="grid justify-items-center grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             {data.slice(0, 12).map((anime, index) => (
               <AnimeCard key={anime.id || `${title}-${index}`} anime={anime} />
             ))}
@@ -314,11 +322,11 @@ const HomePage = () => {
                         >
                           <div className="relative">
                             <img
-                              src={anime.image || `http://localhost:5000/api/placeholder/60/80`}
+                              src={anime.image}
                               alt={anime.title}
                               className="w-12 h-16 rounded-lg object-cover transition-transform group-hover:scale-105"
                               onError={(e) => {
-                                e.target.src = `http://localhost:5000/api/placeholder/60/80`;
+                                e.target.style.display='none';
                               }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -431,20 +439,6 @@ const HomePage = () => {
   }
 
   return (
-    <>
-      <SEO
-        title="Watch Anime Online Free - AnimeLeveling"
-        description="Stream thousands of anime episodes free in HD. Watch Naruto, One Piece, Attack on Titan, Demon Slayer, Jujutsu Kaisen and more on AnimeLeveling."
-        keywords="watch anime online free, anime streaming HD, free anime site, trending anime, popular anime 2025, anime episodes online, AnimeLeveling"
-        path="/"
-        structuredData={{
-          '@context': 'https://schema.org',
-          '@type': 'ItemList',
-          name: 'Trending & Popular Anime',
-          description: 'Watch trending and popular anime online free in HD quality.',
-          url: process.env.REACT_APP_SITE_URL || 'https://animeleveling.com',
-        }}
-      />
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-slate-900">
 
       <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-red-600 max-h-[200px] h-[200px] rounded-xl border border-slate-700/50">
@@ -533,7 +527,6 @@ const HomePage = () => {
         </div>
       </div>
     </div>
-    </>
   );
 };
 
