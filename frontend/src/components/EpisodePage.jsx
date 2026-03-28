@@ -1,9 +1,21 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Loader2, Orbit,
-  Play, Radio, Sparkles, Tv2, Volume2, X,
-  AlertTriangle, RefreshCw, ExternalLink, SkipForward, SkipBack,
+  ArrowLeft,
+  ArrowRight,
+  Loader2,
+  Orbit,
+  Play,
+  Radio,
+  Sparkles,
+  Tv2,
+  Volume2,
+  X,
+  AlertTriangle,
+  RefreshCw,
+  ExternalLink,
+  SkipForward,
+  SkipBack,
 } from 'lucide-react';
 import SEO from './SEO';
 import { animeAPI } from '../services/api';
@@ -11,206 +23,351 @@ import { animeAPI } from '../services/api';
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const getCropPreset = () => {
+  if (typeof window === 'undefined') {
+    return { top: 110, bottom: 90 };
+  }
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const isLandscape = w > h;
+
+  // telefoane mici
+  if (w < 480) {
+    return isLandscape
+      ? { top: 82, bottom: 68 }
+      : { top: 96, bottom: 82 };
+  }
+
+  // telefoane normale / mari
+  if (w < 768) {
+    return isLandscape
+      ? { top: 86, bottom: 72 }
+      : { top: 102, bottom: 86 };
+  }
+
+  // tablete
+  if (w < 1024) {
+    return isLandscape
+      ? { top: 94, bottom: 78 }
+      : { top: 108, bottom: 90 };
+  }
+
+  // desktop
+  return { top: 130, bottom: 110 };
+};
+
+const getModalMaxHeight = () => {
+  if (typeof window === 'undefined') return '95dvh';
+  const h = window.innerHeight;
+
+  if (h < 700) return '98dvh';
+  if (h < 900) return '96dvh';
+  return '95dvh';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Watch Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, animeId, slug, onClose }) => {
+const WatchModal = ({
+  animeSlug,
+  animeTitle,
+  episodeNumber,
+  totalEpisodes,
+  animeId,
+  slug,
+  onClose,
+}) => {
   const navigate = useNavigate();
 
-  const [sources,   setSources]   = useState([]);
-  const [active,    setActive]    = useState(null);
-  const [watchUrl,  setWatchUrl]  = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
+  const [sources, setSources] = useState([]);
+  const [active, setActive] = useState(null);
+  const [watchUrl, setWatchUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [currentEp, setCurrentEp] = useState(episodeNumber);
+  const [crop, setCrop] = useState(getCropPreset());
+  const [modalMaxHeight, setModalMaxHeight] = useState(getModalMaxHeight());
 
-  // Escape key
+  // prevent body scroll while modal is open
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  // escape key
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const fetchSources = useCallback(async (ep) => {
-    setLoading(true);
-    setError(null);
-    setSources([]);
-    setActive(null);
-    try {
-      const res  = await fetch(
-        `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}` +
-        `?title=${encodeURIComponent(animeTitle || '')}`
-      );
-      const data = await res.json();
-      if (!data.success) { setError(data.message || 'No sources available.'); return; }
-      setWatchUrl(data.watchUrl);
-      if (data.sources?.length > 0) {
-        setSources(data.sources);
-        setActive(data.sources.find((s) => s.type === 'sub') || data.sources[0]);
-      } else {
-        setSources([]);
-        setActive({ serverId: 'direct', serverName: 'AniWatch', type: 'direct', embedUrl: data.watchUrl });
+  // resize / orientation handling
+  useEffect(() => {
+    const updateLayout = () => {
+      setCrop(getCropPreset());
+      setModalMaxHeight(getModalMaxHeight());
+    };
+
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    window.addEventListener('orientationchange', updateLayout);
+
+    return () => {
+      window.removeEventListener('resize', updateLayout);
+      window.removeEventListener('orientationchange', updateLayout);
+    };
+  }, []);
+
+  const fetchSources = useCallback(
+    async (ep) => {
+      setLoading(true);
+      setError(null);
+      setSources([]);
+      setActive(null);
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/anime/sources/${encodeURIComponent(animeSlug)}/${ep}?title=${encodeURIComponent(
+            animeTitle || ''
+          )}`
+        );
+        const data = await res.json();
+
+        if (!data.success) {
+          setError(data.message || 'No sources available.');
+          return;
+        }
+
+        setWatchUrl(data.watchUrl || null);
+
+        if (data.sources?.length > 0) {
+          setSources(data.sources);
+          setActive(data.sources.find((s) => s.type === 'sub') || data.sources[0]);
+        } else {
+          setSources([]);
+          setActive({
+            serverId: 'direct',
+            serverName: 'AniWatch',
+            type: 'direct',
+            embedUrl: data.watchUrl,
+          });
+        }
+      } catch {
+        setError('Failed to connect to server.');
+      } finally {
+        setLoading(false);
       }
-    } catch { setError('Failed to connect to server.'); }
-    finally   { setLoading(false); }
-  }, [animeSlug, animeTitle]);
+    },
+    [animeSlug, animeTitle]
+  );
 
-  useEffect(() => { fetchSources(currentEp); }, [currentEp, fetchSources]);
+  useEffect(() => {
+    fetchSources(currentEp);
+  }, [currentEp, fetchSources]);
 
-  const goToEp = (ep) => {
-    setCurrentEp(ep);
-    navigate(`/anime/${animeId}/${slug}/episode/${ep}`, { replace: true });
-  };
+  const goToEp = useCallback(
+    (ep) => {
+      setCurrentEp(ep);
+      navigate(`/anime/${animeId}/${slug}/episode/${ep}`, { replace: true });
+    },
+    [animeId, slug, navigate]
+  );
 
-  const hasPrev   = currentEp > 1;
-  const hasNext   = totalEpisodes ? currentEp < totalEpisodes : true;
+  const hasPrev = currentEp > 1;
+  const hasNext = totalEpisodes ? currentEp < totalEpisodes : true;
   const iframeSrc = active?.embedUrl || null;
   const isFullPage = active?.serverId === 'direct';
 
+  const playerWrapperStyle = useMemo(() => {
+    return {
+      aspectRatio: '16 / 9',
+      maxHeight: 'calc(100dvh - 240px)',
+      minHeight: '220px',
+      width: '100%',
+    };
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-5"
-      style={{ background: 'rgba(0,0,0,0.96)', backdropFilter: 'blur(16px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-5"
+      style={{
+        background: 'rgba(0,0,0,0.96)',
+        backdropFilter: 'blur(16px)',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="w-full flex flex-col rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
-        style={{ background: '#0d1117', maxWidth: 960, maxHeight: '95vh' }}
+        style={{
+          background: '#0d1117',
+          maxWidth: 960,
+          width: '100%',
+          maxHeight: modalMaxHeight,
+        }}
       >
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <Tv2 className="w-4 h-4 text-violet-400 flex-shrink-0" />
             <span className="text-white font-semibold text-sm truncate">{animeTitle}</span>
             <span className="text-violet-300 text-sm flex-shrink-0">— Episode {currentEp}</span>
           </div>
+
           <div className="flex items-center gap-1.5 ml-3 flex-shrink-0">
-            <button onClick={() => fetchSources(currentEp)} title="Reload"
-              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition">
+            <button
+              onClick={() => fetchSources(currentEp)}
+              title="Reload"
+              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition"
+            >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
-            <button onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition">
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* ── Player ─────────────────────────────────────────────────────────
-         *
-         * Containerul are aspect-ratio 16:9 strict (DOAR video, fără bare).
-         * overflow:hidden taie tot ce iese din container.
-         *
-         * Iframe full-page aniwatchtv:
-         *   - top: -130px  → tăiem header + titlu aniwatchtv (sus)
-         *   - height: 100% + 130px + 110px → iframe mai înalt ca containerul
-         *     → barele de jos (Light/AutoPlay/Prev/Next, ~110px) ies din container
-         *     → overflow:hidden le taie
-         *
-         * Rezultat: se vede STRICT zona video, fără niciun element al aniwatchtv.
-         * ────────────────────────────────────────────────────────────────── */}
-        <div
-          className="relative bg-black flex-shrink-0 w-full overflow-hidden"
-          style={{ height: 40 }}
-        >
-          {/* Loading */}
-          {loading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
-              <Loader2 className="w-10 h-10 animate-spin text-violet-400" />
-              <span className="text-sm text-gray-400">Loading player…</span>
-            </div>
-          )}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center z-10">
-              <AlertTriangle className="w-10 h-10 text-yellow-400" />
-              <p className="text-gray-300 text-sm max-w-sm leading-relaxed">{error}</p>
-              <div className="flex gap-3 flex-wrap justify-center">
-                <button onClick={() => fetchSources(currentEp)}
-                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition">
-                  Retry
-                </button>
-                {watchUrl && (
-                  <a href={watchUrl} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm transition">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Open on AniWatch
-                  </a>
-                )}
+        {/* Player */}
+        <div className="relative flex-shrink-0 border-b border-white/10 bg-black">
+          <div
+            className="relative w-full overflow-hidden bg-black"
+            style={playerWrapperStyle}
+          >
+            {loading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
+                <Loader2 className="w-10 h-10 animate-spin text-violet-400" />
+                <span className="text-sm text-gray-400">Loading player…</span>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Iframe */}
-          {!loading && !error && iframeSrc && (
-            isFullPage ? (
-              // Pagina completă aniwatchtv — clip sus și jos
-              <iframe
-                key={iframeSrc}
-                src={iframeSrc}
-                scrolling="no"
-                allowFullScreen
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                referrerPolicy="origin"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-pointer-lock"
-                title={`${animeTitle} Episode ${currentEp}`}
-                style={{
-                  position : 'absolute',
-                  top      : '-130px',          // taie header aniwatchtv
-                  left     : 0,
-                  width    : '100%',
-                  height   : 'calc(100% + 130px + 110px)', // extinde jos → barele ies din container
-                  border   : 'none',
-                }}
-              />
-            ) : (
-              // Embed direct — iframe perfect 100%
-              <iframe
-                key={iframeSrc}
-                src={iframeSrc}
-                allowFullScreen
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
-                referrerPolicy="origin"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-pointer-lock"
-                title={`${animeTitle} Episode ${currentEp}`}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-              />
-            )
-          )}
+            {!loading && error && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center z-10">
+                <AlertTriangle className="w-10 h-10 text-yellow-400" />
+                <p className="text-gray-300 text-sm max-w-sm leading-relaxed">{error}</p>
 
-          {!loading && !error && !iframeSrc && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-              <Play className="w-10 h-10 text-gray-600" />
-              <p className="text-gray-500 text-sm">No player available.</p>
-            </div>
-          )}
+                <div className="flex gap-3 flex-wrap justify-center">
+                  <button
+                    onClick={() => fetchSources(currentEp)}
+                    className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition"
+                  >
+                    Retry
+                  </button>
+
+                  {watchUrl && (
+                    <a
+                      href={watchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm transition"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Open on AniWatch
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!loading && !error && iframeSrc && (
+              isFullPage ? (
+                <iframe
+                  key={`${iframeSrc}-${crop.top}-${crop.bottom}`}
+                  src={iframeSrc}
+                  scrolling="no"
+                  allowFullScreen
+                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                  referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-pointer-lock"
+                  title={`${animeTitle} Episode ${currentEp}`}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    width: '100%',
+                    top: `-${crop.top}px`,
+                    height: `calc(100% + ${crop.top + crop.bottom}px)`,
+                    border: 'none',
+                    overflow: 'hidden',
+                  }}
+                />
+              ) : (
+                <iframe
+                  key={iframeSrc}
+                  src={iframeSrc}
+                  scrolling="no"
+                  allowFullScreen
+                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
+                  referrerPolicy="origin"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-pointer-lock"
+                  title={`${animeTitle} Episode ${currentEp}`}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    overflow: 'hidden',
+                  }}
+                />
+              )
+            )}
+
+            {!loading && !error && !iframeSrc && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <Play className="w-10 h-10 text-gray-600" />
+                <p className="text-gray-500 text-sm">No player available.</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ── Controls ───────────────────────────────────────────────────── */}
-        <div className="flex-shrink-0 border-t border-white/10">
-
-          {/* Server selector — doar dacă avem embed-uri multiple */}
+        {/* Controls */}
+        <div className="flex-shrink-0 overflow-y-auto">
           {!loading && !error && sources.length > 1 && (
             <div className="px-4 py-3 border-b border-white/5">
               <div className="flex items-center gap-2 mb-2">
                 <Volume2 className="w-3.5 h-3.5 text-gray-500" />
                 <span className="text-xs text-gray-500 uppercase tracking-wider">Servers</span>
               </div>
+
               <div className="flex flex-wrap gap-2">
                 {sources.map((src) => {
                   const isActive = active?.serverId === src.serverId;
+
                   return (
-                    <button key={src.serverId} onClick={() => setActive(src)}
+                    <button
+                      key={src.serverId}
+                      onClick={() => setActive(src)}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition-all border ${
                         isActive
                           ? 'bg-violet-600 border-violet-500 text-white'
                           : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white'
-                      }`}>
+                      }`}
+                    >
                       {src.serverName}
-                      <span className={`ml-1 text-[10px] px-1 py-0.5 rounded ${
-                        src.type === 'sub' ? 'bg-blue-500/30 text-blue-300' : 'bg-orange-500/30 text-orange-300'
-                      }`}>
+                      <span
+                        className={`ml-1 text-[10px] px-1 py-0.5 rounded ${
+                          src.type === 'sub'
+                            ? 'bg-blue-500/30 text-blue-300'
+                            : 'bg-orange-500/30 text-orange-300'
+                        }`}
+                      >
                         {src.type?.toUpperCase()}
                       </span>
                     </button>
@@ -220,7 +377,15 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
             </div>
           )}
 
-          {/* Prev / Next episode */}
+          {isFullPage && !loading && !error && (
+            <div className="px-4 py-2 border-b border-white/5">
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                Embedded full-page sources may render slightly differently across devices. If playback
+                looks off on mobile, use “Open on AniWatch”.
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between px-4 py-3 gap-3">
             <button
               onClick={() => hasPrev && goToEp(currentEp - 1)}
@@ -237,7 +402,8 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
             </button>
 
             <span className="text-xs text-gray-500 flex-shrink-0">
-              Episode {currentEp}{totalEpisodes ? ` / ${totalEpisodes}` : ''}
+              Episode {currentEp}
+              {totalEpisodes ? ` / ${totalEpisodes}` : ''}
             </span>
 
             <button
@@ -267,15 +433,20 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
 const InfoPanel = ({ icon, title, text, accent = 'violet' }) => {
   const accentMap = {
     violet: 'from-violet-500/20 via-fuchsia-500/10 to-cyan-400/10 border-violet-500/20',
-    red   : 'from-red-500/20 via-pink-500/10 to-orange-400/10 border-red-500/20',
-    cyan  : 'from-cyan-500/20 via-blue-500/10 to-violet-400/10 border-cyan-500/20',
+    red: 'from-red-500/20 via-pink-500/10 to-orange-400/10 border-red-500/20',
+    cyan: 'from-cyan-500/20 via-blue-500/10 to-violet-400/10 border-cyan-500/20',
   };
+
   return (
-    <div className={`relative overflow-hidden rounded-3xl border bg-gradient-to-br ${accentMap[accent]} backdrop-blur-sm`}>
+    <div
+      className={`relative overflow-hidden rounded-3xl border bg-gradient-to-br ${accentMap[accent]} backdrop-blur-sm`}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06),transparent_40%)] pointer-events-none" />
       <div className="relative p-6">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-2xl bg-black/20 border border-white/10 flex items-center justify-center">{icon}</div>
+          <div className="w-10 h-10 rounded-2xl bg-black/20 border border-white/10 flex items-center justify-center">
+            {icon}
+          </div>
           <div>
             <h2 className="text-lg font-bold text-white">{title}</h2>
             <div className="w-8 h-0.5 rounded-full bg-gradient-to-r from-violet-500 via-pink-500 to-cyan-400 mt-1" />
@@ -295,17 +466,19 @@ const EpisodePage = () => {
   const { id, slug, episodeNumber } = useParams();
   const numericEpisode = parseInt(episodeNumber, 10);
 
-  const [anime,          setAnime]          = useState(null);
+  const [anime, setAnime] = useState(null);
   const [episodeContent, setEpisodeContent] = useState(null);
-  const [loading,        setLoading]        = useState(true);
-  const [error,          setError]          = useState(null);
-  const [showPlayer,     setShowPlayer]     = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showPlayer, setShowPlayer] = useState(false);
 
   useEffect(() => {
     if (!id || !numericEpisode) return;
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const animeData = await animeAPI.getDetails(id);
         setAnime(animeData);
@@ -317,27 +490,38 @@ const EpisodePage = () => {
 
         const res = await fetch(
           `${API_BASE}/content/episode/${encodeURIComponent(id)}/${encodeURIComponent(numericEpisode)}` +
-          `?title=${encodeURIComponent(animeData.title || '')}` +
-          `&year=${encodeURIComponent(animeData.year || '')}` +
-          `&score=${encodeURIComponent(score)}` +
-          `&genres=${encodeURIComponent((animeData.genres || []).join(','))}`
+            `?title=${encodeURIComponent(animeData.title || '')}` +
+            `&year=${encodeURIComponent(animeData.year || '')}` +
+            `&score=${encodeURIComponent(score)}` +
+            `&genres=${encodeURIComponent((animeData.genres || []).join(','))}`
         );
+
         const json = await res.json();
-        if (json?.success) setEpisodeContent(json.data || null);
-      } catch { setError('Failed to load episode page'); }
-      finally   { setLoading(false); }
+
+        if (json?.success) {
+          setEpisodeContent(json.data || null);
+        }
+      } catch {
+        setError('Failed to load episode page');
+      } finally {
+        setLoading(false);
+      }
     };
+
     fetchData();
   }, [id, numericEpisode]);
 
-  const openPlayer  = useCallback(() => setShowPlayer(true),  []);
+  const openPlayer = useCallback(() => setShowPlayer(true), []);
   const closePlayer = useCallback(() => setShowPlayer(false), []);
 
-  const totalEps = anime?.totalEpisodes && anime.totalEpisodes !== 'Unknown'
-    ? parseInt(anime.totalEpisodes, 10) : null;
+  const totalEps =
+    anime?.totalEpisodes && anime.totalEpisodes !== 'Unknown'
+      ? parseInt(anime.totalEpisodes, 10)
+      : null;
 
-  const prevLink = numericEpisode > 1
-    ? `/anime/${id}/${slug}/episode/${numericEpisode - 1}` : null;
+  const prevLink =
+    numericEpisode > 1 ? `/anime/${id}/${slug}/episode/${numericEpisode - 1}` : null;
+
   const nextLink = `/anime/${id}/${slug}/episode/${numericEpisode + 1}`;
 
   if (loading) {
@@ -368,10 +552,12 @@ const EpisodePage = () => {
         path={`/anime/${id}/${slug}/episode/${numericEpisode}`}
         type="article"
         structuredData={{
-          '@context': 'https://schema.org', '@type': 'TVEpisode',
+          '@context': 'https://schema.org',
+          '@type': 'TVEpisode',
           name: `${anime.title} Episode ${numericEpisode}`,
           partOfSeries: { '@type': 'TVSeries', name: anime.title },
-          episodeNumber: numericEpisode, image: anime.image,
+          episodeNumber: numericEpisode,
+          image: anime.image,
         }}
       />
 
@@ -389,7 +575,6 @@ const EpisodePage = () => {
 
       <div className="min-h-screen bg-[#0a0f1f] text-white">
         <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
-
           {/* Back + Breadcrumb */}
           <div className="flex items-center gap-4 flex-wrap">
             <Link
@@ -401,17 +586,21 @@ const EpisodePage = () => {
               <ArrowLeft className="w-4 h-4" />
               Back
             </Link>
+
             <nav className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
-              <Link to="/" className="hover:text-white transition">Home</Link>
+              <Link to="/" className="hover:text-white transition">
+                Home
+              </Link>
               <span>/</span>
-              <Link to={`/anime/${id}/${slug}`} className="hover:text-white transition">{anime.title}</Link>
+              <Link to={`/anime/${id}/${slug}`} className="hover:text-white transition">
+                {anime.title}
+              </Link>
               <span>/</span>
               <span className="text-gray-300">Episode {numericEpisode}</span>
             </nav>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-8">
-
             {/* Sidebar */}
             <aside className="space-y-4">
               <div
@@ -444,8 +633,10 @@ const EpisodePage = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 {prevLink ? (
-                  <Link to={prevLink}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-xs text-gray-300 hover:text-white">
+                  <Link
+                    to={prevLink}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition text-xs text-gray-300 hover:text-white"
+                  >
                     <ArrowLeft className="w-3.5 h-3.5" /> Ep {numericEpisode - 1}
                   </Link>
                 ) : (
@@ -453,8 +644,11 @@ const EpisodePage = () => {
                     <ArrowLeft className="w-3.5 h-3.5" /> Prev
                   </div>
                 )}
-                <Link to={nextLink}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600/80 to-pink-600/80 hover:from-violet-500 hover:to-pink-500 border border-violet-400/20 transition text-xs text-white">
+
+                <Link
+                  to={nextLink}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-violet-600/80 to-pink-600/80 hover:from-violet-500 hover:to-pink-500 border border-violet-400/20 transition text-xs text-white"
+                >
                   Ep {numericEpisode + 1} <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -465,22 +659,40 @@ const EpisodePage = () => {
               <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 md:p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.10),transparent_30%)] pointer-events-none" />
                 <div className="relative space-y-7">
-
                   <div>
                     <h1 className="text-3xl md:text-4xl font-black tracking-tight">{anime.title}</h1>
                     <p className="text-violet-300 font-semibold mt-1">Episode {numericEpisode}</p>
                   </div>
 
-                  {(episodeContent?.customIntro || episodeContent?.watchGuide || episodeContent?.whyWatch) && (
+                  {(episodeContent?.customIntro ||
+                    episodeContent?.watchGuide ||
+                    episodeContent?.whyWatch) && (
                     <div className="space-y-4">
                       {episodeContent?.customIntro && (
-                        <InfoPanel icon={<Sparkles className="w-5 h-5 text-violet-300" />} title="Overview" text={episodeContent.customIntro} accent="violet" />
+                        <InfoPanel
+                          icon={<Sparkles className="w-5 h-5 text-violet-300" />}
+                          title="Overview"
+                          text={episodeContent.customIntro}
+                          accent="violet"
+                        />
                       )}
+
                       {episodeContent?.watchGuide && (
-                        <InfoPanel icon={<Radio className="w-5 h-5 text-red-300" />} title="Where to watch" text={episodeContent.watchGuide} accent="red" />
+                        <InfoPanel
+                          icon={<Radio className="w-5 h-5 text-red-300" />}
+                          title="Where to watch"
+                          text={episodeContent.watchGuide}
+                          accent="red"
+                        />
                       )}
+
                       {episodeContent?.whyWatch && (
-                        <InfoPanel icon={<Orbit className="w-5 h-5 text-cyan-300" />} title="Why watch this episode?" text={episodeContent.whyWatch} accent="cyan" />
+                        <InfoPanel
+                          icon={<Orbit className="w-5 h-5 text-cyan-300" />}
+                          title="Why watch this episode?"
+                          text={episodeContent.whyWatch}
+                          accent="cyan"
+                        />
                       )}
                     </div>
                   )}
@@ -501,7 +713,10 @@ const EpisodePage = () => {
 
                   <div className="flex flex-col sm:flex-row gap-3">
                     {prevLink ? (
-                      <Link to={prevLink} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition">
+                      <Link
+                        to={prevLink}
+                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition"
+                      >
                         <ArrowLeft className="w-4 h-4" /> Episode {numericEpisode - 1}
                       </Link>
                     ) : (
@@ -509,11 +724,14 @@ const EpisodePage = () => {
                         <ArrowLeft className="w-4 h-4" /> Previous
                       </div>
                     )}
-                    <Link to={nextLink} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white border border-violet-400/20 transition shadow-lg shadow-violet-500/10">
+
+                    <Link
+                      to={nextLink}
+                      className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white border border-violet-400/20 transition shadow-lg shadow-violet-500/10"
+                    >
                       Episode {numericEpisode + 1} <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
-
                 </div>
               </div>
             </main>
