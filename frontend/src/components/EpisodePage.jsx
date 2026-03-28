@@ -25,22 +25,30 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
+
+    // Lock scroll - metoda robusta pentru iOS Safari si Android
     const scrollY = window.scrollY;
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.top      = `-${scrollY}px`;
     document.body.style.width    = '100%';
-    const preventScroll = (e) => e.preventDefault();
-    document.addEventListener('wheel',     preventScroll, { passive: false });
-    document.addEventListener('touchmove', preventScroll, { passive: false });
+    document.documentElement.style.overflow = 'hidden';
+
+    // Previne touchmove pe tot documentul (iOS necesita passive:false)
+    const preventTouch = (e) => {
+      if (e.target.closest('.modal-player-area')) return; // permite touch IN player
+      e.preventDefault();
+    };
+    document.addEventListener('touchmove', preventTouch, { passive: false });
+
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.removeEventListener('wheel',     preventScroll);
-      document.removeEventListener('touchmove', preventScroll);
+      document.removeEventListener('touchmove', preventTouch);
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top      = '';
       document.body.style.width    = '';
+      document.documentElement.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
   }, [onClose]);
@@ -93,13 +101,13 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 md:p-6"
       style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(12px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-5xl rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col"
-        style={{ background: '#0d1117', maxHeight: '92vh' }}
+        className="w-full max-w-5xl rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-white/10 shadow-2xl flex flex-col"
+        style={{ background: '#0d1117', maxHeight: '100dvh' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
@@ -122,7 +130,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
         </div>
 
         {/* Player */}
-        <div className="relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9' }}>
+        <div className="modal-player-area relative bg-black flex-shrink-0" style={{ aspectRatio: '16/9', touchAction: 'none', overscrollBehavior: 'none' }}>
 
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
@@ -151,28 +159,20 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div style={{ height: '470px' }}>
+            <div className="w-full h-full overflow-hidden" style={{ position: 'relative' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
                 style={
                   useIframe && !active
                     ? {
-                        // Clip: taie header aniwatchtv sus (130px) si bare jos (110px)
-                        position : 'absolute',
-                        top      : '-130px',
-                        left     : 0,
-                        width    : '100%',
-                        height   : 'calc(100% + 130px + 110px)',
-                        border   : 'none',
+                        // Taie header-ul aniwatchtv (~120px) și arată direct playerul
+                        width     : '100%',
+                        height    : '280%',
+                        marginTop : '-120px',
+                        border    : 'none',
                       }
-                    : {
-                        position : 'absolute',
-                        inset    : 0,
-                        width    : '100%',
-                        height   : '100%',
-                        border   : 'none',
-                      }
+                    : { width: '100%', height: '100%', border: 'none' }
                 }
                 allowFullScreen
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
