@@ -50,6 +50,13 @@ const AnimeDetails = () => {
 
     try {
       const data = await animeAPI.getDetails(id);
+
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        setError('Anime not found');
+        setLoading(false);
+        return;
+      }
+
       setAnime(data);
 
       const score =
@@ -57,25 +64,26 @@ const AnimeDetails = () => {
         data.meanScore ??
         (data.rating ? Math.round(parseFloat(data.rating) * 10) : '');
 
-      const contentRes = await fetch(
-        `${API_BASE}/content/anime/${encodeURIComponent(id)}?title=${encodeURIComponent(
-          data.title || ''
-        )}&year=${encodeURIComponent(data.year || '')}&score=${encodeURIComponent(
-          score
-        )}&genres=${encodeURIComponent((data.genres || []).join(','))}`
-      );
-
-      const contentJson = await contentRes.json();
-
-      if (contentJson?.success) {
-        setCustomContent(contentJson.data || null);
-      } else {
+      // Content fetch separat — nu blocheaza pagina daca esueaza
+      try {
+        const contentRes = await fetch(
+          `${API_BASE}/content/anime/${encodeURIComponent(id)}?title=${encodeURIComponent(
+            data.title || ''
+          )}&year=${encodeURIComponent(data.year || '')}&score=${encodeURIComponent(
+            score
+          )}&genres=${encodeURIComponent((data.genres || []).join(','))}`
+        );
+        if (contentRes.ok) {
+          const contentJson = await contentRes.json();
+          setCustomContent(contentJson?.success ? (contentJson.data || null) : null);
+        }
+      } catch {
         setCustomContent(null);
       }
+
     } catch (err) {
       console.error('Error fetching anime details:', err);
       setError('Failed to load anime details');
-      setCustomContent(null);
     } finally {
       setLoading(false);
     }
@@ -198,12 +206,14 @@ const AnimeDetails = () => {
     }, {});
   }, [anime, generatedEpisodes]);
 
+  // eslint-disable-next-line no-unused-vars
   const toggleEpisodeDropdown = (e, episodeNumber) => {
     e.preventDefault();
     e.stopPropagation();
     setOpenDropdownEpisode((prev) => (prev === episodeNumber ? null : episodeNumber));
   };
 
+  // eslint-disable-next-line no-unused-vars
   const openProvider = (e, url) => {
     e.preventDefault();
     e.stopPropagation();
