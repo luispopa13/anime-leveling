@@ -13,7 +13,7 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 // Watch Modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
+const WatchModal = ({ animeSlug, animeTitle, englishTitle = '', romajiTitle = '', episodeNumber, onClose }) => {
   const [sources,   setSources]   = useState([]);
   const [active,    setActive]    = useState(null);
   const [watchUrl,  setWatchUrl]  = useState(null);
@@ -76,13 +76,13 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
       style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(12px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-5xl rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-white/10 shadow-2xl flex flex-col"
-        style={{ background: '#0d1117', maxHeight: '100dvh' }}
+        className="w-full max-w-5xl rounded-2xl overflow-hidden border border-white/10 shadow-2xl flex flex-col"
+        style={{ background: '#0d1117', maxHeight: '92vh' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
@@ -134,22 +134,20 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
           )}
 
           {!loading && !error && iframeSrc && (
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            <div className="w-full h-full overflow-hidden" style={{ position: 'relative' }}>
               <iframe
                 key={iframeSrc}
                 src={iframeSrc}
                 style={
                   useIframe && !active
                     ? {
-                        // Clipping aniwatchtv: taie header sus si bare jos
-                        position  : 'absolute',
-                        top       : '-80px',
-                        left      : 0,
+                        // Taie header-ul aniwatchtv (~120px) și arată direct playerul
                         width     : '100%',
-                        height    : 'calc(100% + 80px + 80px)',
+                        height    : '280%',
+                        marginTop : '-120px',
                         border    : 'none',
                       }
-                    : { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }
+                    : { width: '100%', height: '100%', border: 'none' }
                 }
                 allowFullScreen
                 allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
@@ -344,8 +342,10 @@ const EpisodePage = () => {
 
       {showPlayer && (
         <WatchModal
-          animeSlug={slug}           /* slug-ul din URL: "naruto", "attack-on-titan" */
-          animeTitle={anime.title}   /* titlul exact din AniList: "Naruto" */
+          animeSlug={slug}
+          animeTitle={anime.title}
+          englishTitle={anime.englishTitle || ''}
+          romajiTitle={anime.romajiTitle || ''}
           episodeNumber={numericEpisode}
           onClose={closePlayer}
         />

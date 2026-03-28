@@ -52,6 +52,17 @@ function escapeRegex(str) {
   return (str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Transforma un titlu in slug pentru cautare in DB
+// "Attack on Titan" → "attack-on-titan"
+function titleToSlug(title) {
+  return (title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 /**
  * Normalizează titlul pentru comparare:
  * - lowercase, fără punctuație
@@ -157,6 +168,23 @@ async function findAnimeInDb(Model, urlSlug, titleFromAniList) {
     }
   }
 
+  // ── Strategie 3b: slug generat din titlu englezesc ──────────────────────────
+  // Ex: titleFromAniList="Attack on Titan" → cautam slug "attack-on-titan"
+  if (titleFromAniList && urlSlug !== titleToSlug(titleFromAniList)) {
+    const titleSlug = titleToSlug(titleFromAniList);
+    if (titleSlug.length >= 4) {
+      const titleSlugWords = titleSlug.split('-').slice(0, 5).join('-');
+      const titleSlugDocs = await Model.find({
+        animeSlug   : { $regex: escapeRegex(titleSlugWords), $options: 'i' },
+        scrapeStatus: { $ne: 'error' },
+      }).limit(5).lean();
+      for (const doc of titleSlugDocs) {
+        const sim = wordSimilarity(titleFromAniList, doc.animeTitle);
+        addCandidate(doc, 'title-slug', 0.5 + sim * 0.45);
+      }
+    }
+  }
+
   // ── Strategie 4: cuvinte cheie din titlu în animeTitle ─────────────────────
   if (titleFromAniList) {
     const normTitle = norm(titleFromAniList);
@@ -230,10 +258,20 @@ function parseServers(html) {
 /**
  * Încearcă să obțină surse video de la un provider.
  */
-async function tryProvider(provider, urlSlug, aniTitle, epNum) {
-  const Model = provider.model();
+async function tryProvider(provider, urlSlug, titlesInput, epNum) {
+  const Model  = provider.model();
+  // Accepta un string sau array de titluri
+  const titles = Array.isArray(titlesInput) ? titlesInput : [titlesInput];
 
-  const result = await findAnimeInDb(Model, urlSlug, aniTitle);
+  // Incearca matching cu fiecare titlu disponibil
+  let result = null;
+  for (const t of titles) {
+    result = await findAnimeInDb(Model, urlSlug, t);
+    if (result && result.confidence >= 0.5) break;
+    // Daca am gasit ceva cu confidence scazut, continuam sa incercam
+    if (!result || result.confidence < 0.4) result = null;
+  }
+  if (!result) result = await findAnimeInDb(Model, urlSlug, titles[0]);
   if (!result) {
     console.log(`[${provider.name}] Not found for "${urlSlug}" / "${aniTitle}"`);
     return null;
@@ -305,9 +343,14 @@ router.get('/debug-match', async (req, res) => {
 // GET /api/anime/sources/:animeSlug/:episodeNumber?title=...
 
 router.get('/sources/:animeSlug/:episodeNumber', async (req, res) => {
-  const urlSlug  = req.params.animeSlug;
-  const epNum    = parseInt(req.params.episodeNumber, 10);
-  const aniTitle = req.query.title || '';
+  const urlSlug     = req.params.animeSlug;
+  const epNum       = parseInt(req.params.episodeNumber, 10);
+  const aniTitle    = req.query.title        || '';
+  const engTitle    = req.query.englishTitle || '';
+  const romTitle    = req.query.romajiTitle  || '';
+
+  // Toate titlurile disponibile — le incercam pe rand pentru matching
+  const allTitles = [aniTitle, engTitle, romTitle].filter(Boolean);
 
   if (!urlSlug || isNaN(epNum)) {
     return res.status(400).json({ success: false, message: 'Invalid slug or episodeNumber' });
@@ -327,7 +370,7 @@ router.get('/sources/:animeSlug/:episodeNumber', async (req, res) => {
 
     for (const provider of PROVIDERS) {
       tried.push(provider.name);
-      const result = await tryProvider(provider, urlSlug, aniTitle, epNum);
+      const result = await tryProvider(provider, urlSlug, allTitles, epNum);
 
       if (!result) continue;
 
