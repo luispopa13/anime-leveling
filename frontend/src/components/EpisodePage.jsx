@@ -34,16 +34,18 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
     document.body.style.width    = '100%';
     document.documentElement.style.overflow = 'hidden';
 
-    // Previne touchmove pe tot documentul (iOS necesita passive:false)
-    const preventTouch = (e) => {
-      if (e.target.closest('.modal-player-area')) return; // permite touch IN player
+    // Previne touchmove si wheel pe tot documentul
+    const preventScroll = (e) => {
+      if (e.target.closest('.modal-player-area')) return;
       e.preventDefault();
     };
-    document.addEventListener('touchmove', preventTouch, { passive: false });
+    document.addEventListener('touchmove', preventScroll, { passive: false });
+    document.addEventListener('wheel', preventScroll, { passive: false });
 
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.removeEventListener('touchmove', preventTouch);
+      document.removeEventListener('touchmove', preventScroll);
+      document.removeEventListener('wheel', preventScroll);
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top      = '';
@@ -104,6 +106,9 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, onClose }) => {
       className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 md:p-6"
       style={{ background: 'rgba(0,0,0,0.94)', backdropFilter: 'blur(12px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onWheel={(e) => e.preventDefault()}
+      onTouchMove={(e) => e.preventDefault()}
+      onScroll={(e) => e.preventDefault()}
     >
       <div
         className="w-full max-w-5xl rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-white/10 shadow-2xl flex flex-col"
