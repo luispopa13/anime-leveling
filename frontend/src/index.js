@@ -7,7 +7,7 @@ import { AnimeFavoritesProvider } from './components/AnimeFavoritesContext';
 import { initDevToolsBlocker } from './utils/devToolsBlocker';
 
 // Pornește blockerul imediat, înainte de orice render
-//initDevToolsBlocker();
+initDevToolsBlocker();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
