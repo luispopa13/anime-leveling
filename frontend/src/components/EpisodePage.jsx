@@ -157,7 +157,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
                 title={`${animeTitle} Episode ${currentEp}`}
                 style={{
                   position : 'absolute',
-                  top      : '-130px',          // taie header aniwatchtv
+                  top      : '-100px',          // taie header aniwatchtv
                   left     : 0,
                   width    : '100%',
                   height   : 'calc(100% + 60px + 10px)', // extinde jos → barele ies din container
