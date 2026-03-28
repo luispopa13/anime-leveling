@@ -111,7 +111,7 @@ const WatchModal = ({ animeSlug, animeTitle, episodeNumber, totalEpisodes, anime
          * ────────────────────────────────────────────────────────────────── */}
         <div
           className="relative bg-black flex-shrink-0 w-full overflow-hidden"
-          style={{ height: 'clamp(410px, 56.25vw, 780px)' }}
+          style={{ height: 'clamp(610px, 56.25vw, 780px)' }}
         >
           {/* Loading */}
           {loading && (
